@@ -567,12 +567,13 @@ local function select_prompt(cb)
 
             if prompt_data then
                 local content = ""
+                content = content .. "replace: " .. tostring(prompt_data.replace or false) .. "\n"
                 if type(prompt_data.prompt) == "string" then
-                    content = prompt_data.prompt
+                    content = content .. "prompt: " .. prompt_data.prompt
                 elseif type(prompt_data.prompt) == "function" then
-                    content = "Prompt function (cannot display)"
+                    content = content .. "prompt: Prompt function (cannot display)"
                 else
-                    content = tostring(prompt_data.prompt)
+                    content = content .. "prompt: " .. tostring(prompt_data.prompt)
                 end
 
                 vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(content, "\n"))
