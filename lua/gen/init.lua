@@ -567,16 +567,23 @@ local function select_prompt(cb)
 
             if prompt_data then
                 local content = ""
-                content = content .. "replace: " .. tostring(prompt_data.replace or false) .. "\n"
+                -- Add replace field if it exists with bold formatting
+                    content = content .. "_replace_: " .. tostring(prompt_data.replace or false) .. "\n"
+                content = content .. "_prompt_: "
                 if type(prompt_data.prompt) == "string" then
-                    content = content .. "prompt: " .. prompt_data.prompt
+                    local highlighted_prompt = prompt_data.prompt
+                    highlighted_prompt = highlighted_prompt:gsub("%$text", "`$text`")
+                    highlighted_prompt = highlighted_prompt:gsub("%$input", "`$input`")
+                    highlighted_prompt = highlighted_prompt:gsub("%$register", "`$register`")
+                    highlighted_prompt = highlighted_prompt:gsub("%$filetype", "`$filetype`")
+                    content = content .. highlighted_prompt
                 elseif type(prompt_data.prompt) == "function" then
-                    content = content .. "prompt: Prompt function (cannot display)"
+                    content = content .. "Prompt function (cannot display)"
                 else
-                    content = content .. "prompt: " .. tostring(prompt_data.prompt)
+                    content = content .. tostring(prompt_data.prompt)
                 end
-
                 vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(content, "\n"))
+                -- Change filetype to markdown for proper rendering
                 vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })
             end
         end
