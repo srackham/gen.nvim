@@ -527,7 +527,7 @@ M.win_config = {}
 M.prompts = prompts
 local function select_prompt(cb)
     -- Check if telescope is available
-    local has_telescope, telescope = pcall(require, "telescope")
+    local has_telescope = pcall(require, "telescope")
     if not has_telescope then
         -- Fallback to vim.ui.select if telescope is not available
         local promptKeys = {}
@@ -548,7 +548,6 @@ local function select_prompt(cb)
     local pickers = require "telescope.pickers"
     local previewers = require "telescope.previewers"
     local sorters = require "telescope.sorters"
-    local make_entry = require "telescope.make_entry"
 
     -- Prepare prompt data for telescope
     local prompt_list = {}
@@ -561,7 +560,7 @@ local function select_prompt(cb)
 
     -- Create previewer that shows the prompt value
     local prompt_previewer = previewers.new_buffer_previewer({
-        define_preview = function(self, entry, status)
+        define_preview = function(self, entry)
             local prompt_key = entry.value
             local prompt_data = prompt_list[prompt_key]
 
@@ -604,7 +603,7 @@ local function select_prompt(cb)
         },
         sorter = sorters.get_generic_fuzzy_sorter(),
         previewer = prompt_previewer,
-        attach_mappings = function(prompt_bufnr, map)
+        attach_mappings = function(prompt_bufnr)
             actions.select_default:replace(function()
                 local selection = action_state.get_selected_entry()
                 actions.close(prompt_bufnr)
