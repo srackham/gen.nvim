@@ -526,15 +526,91 @@ M.win_config = {}
 
 M.prompts = prompts
 local function select_prompt(cb)
-    local promptKeys = {}
-    for key, _ in pairs(M.prompts) do table.insert(promptKeys, key) end
-    table.sort(promptKeys)
-    vim.ui.select(promptKeys, {
-        prompt = "Prompt:",
-        format_item = function(item)
-            return table.concat(vim.split(item, "_"), " ")
+    -- Check if telescope is available
+    local has_telescope, telescope = pcall(require, "telescope")
+    if not has_telescope then
+        -- Fallback to vim.ui.select if telescope is not available
+        local promptKeys = {}
+        for key, _ in pairs(M.prompts) do table.insert(promptKeys, key) end
+        table.sort(promptKeys)
+        vim.ui.select(promptKeys, {
+            prompt = "Prompt:",
+            format_item = function(item)
+                return table.concat(vim.split(item, "_"), " ")
+            end
+        }, function(item) cb(item) end)
+        return
+    end
+
+    local actions = require "telescope.actions"
+    local action_state = require "telescope.actions.state"
+    local finders = require "telescope.finders"
+    local pickers = require "telescope.pickers"
+    local previewers = require "telescope.previewers"
+    local sorters = require "telescope.sorters"
+    local make_entry = require "telescope.make_entry"
+
+    -- Prepare prompt data for telescope
+    local prompt_list = {}
+    local prompt_keys = {}
+    for key, value in pairs(M.prompts) do
+        table.insert(prompt_keys, key)
+        prompt_list[key] = value
+    end
+    table.sort(prompt_keys)
+
+    -- Create previewer that shows the prompt value
+    local prompt_previewer = previewers.new_buffer_previewer({
+        define_preview = function(self, entry, status)
+            local prompt_key = entry.value
+            local prompt_data = prompt_list[prompt_key]
+
+            if prompt_data then
+                local content = ""
+                if type(prompt_data.prompt) == "string" then
+                    content = prompt_data.prompt
+                elseif type(prompt_data.prompt) == "function" then
+                    content = "Prompt function (cannot display)"
+                else
+                    content = tostring(prompt_data.prompt)
+                end
+
+                vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(content, "\n"))
+                vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })
+            end
         end
-    }, function(item) cb(item) end)
+    })
+
+    -- Create and run the telescope picker
+    pickers.new({}, {
+        prompt_title = "Select Prompt",
+        finder = finders.new_table {
+            results = prompt_keys,
+            entry_maker = function(entry)
+                return {
+                    value = entry,
+                    display = table.concat(vim.split(entry, "_"), " "),
+                    ordinal = entry,
+                }
+            end
+        },
+        sorter = sorters.get_generic_fuzzy_sorter(),
+        previewer = prompt_previewer,
+        attach_mappings = function(prompt_bufnr, map)
+            actions.select_default:replace(function()
+                local selection = action_state.get_selected_entry()
+                actions.close(prompt_bufnr)
+                if selection then
+                    cb(selection.value)
+                end
+            end)
+            return true
+        end,
+        layout_config = {
+          width = 0.8,
+          height = 0.5,
+        },
+    }):find()
 end
 
 vim.api.nvim_create_user_command("Gen", function(arg)
