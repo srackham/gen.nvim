@@ -299,7 +299,8 @@ M.exec = function(options)
         if not input then return input end
         local text = input
         if string.find(text, "%$input") then
-            local answer = vim.fn.input("Prompt: ")
+            local answer = vim.fn.input("Input: ")
+            if answer == "" then return "" end -- Abort if the is no user input
             text = string.gsub(text, "%$input", answer)
         end
 
@@ -337,6 +338,7 @@ M.exec = function(options)
     end
 
     prompt = substitute_placeholders(prompt)
+    if prompt == "" then return "" end
 
     if type(opts.extract) == "string" then
         opts.extract = substitute_placeholders(opts.extract)
