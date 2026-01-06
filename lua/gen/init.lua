@@ -331,8 +331,8 @@ M.exec = function(options)
         text = string.gsub(text, "%$register_([%w*+:/\"])", function(r_name)
             local register = vim.fn.getreg(r_name)
             if not register or register:match("^%s*$") then
-                error("Prompt uses $register_" .. rname .. " but register " ..
-                          rname .. " is empty")
+                error("Prompt uses $register_" .. r_name .. " but register " ..
+                          r_name .. " is empty")
             end
             return register
         end)
