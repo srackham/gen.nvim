@@ -314,35 +314,57 @@ M.exec = function(options)
 
     if content == nil or content:match("^%s*$") then
         vim.schedule(function()
-            vim.notify("Gen.nvim warning: No $text selected.", vim.log.levels.WARN)
+            vim.notify("Prompt uses $text but no text is selected", vim.log.levels.WARN)
         end)
         return
     end
 
+    --- Substitutes placeholders in the prompt with actual values.
+    -- This function processes a prompt string and replaces special placeholders
+    -- with their corresponding values from the current context.
+    --
+    -- Placeholders processed:
+    -- - `$input`: Prompts user for input and substitutes the value
+    -- - `$register_<name>`: Substitutes content of specified register
+    -- - `$register`: Substitutes content of default (unnamed) register
+    -- - `$text`: Substitutes selected text content
+    -- - `$filetype`: Substitutes current buffer's filetype
+    --
+    -- @param input string: The prompt string containing placeholders to substitute
+    -- @return string|nil: The prompt with placeholders substituted, or nil if processing should abort
     local function substitute_placeholders(input)
-        if not input then return input end
+        if not input then return nil end
         local text = input
         if string.find(text, "%$input") then
             local answer = vim.fn.input("Input: ")
-            if answer == "" then return "" end -- Abort if the is no user input
+            if answer == "" then return nil end -- Abort if the is no user input
             text = string.gsub(text, "%$input", answer)
         end
 
+        local register_error = false
         text = string.gsub(text, "%$register_([%w*+:/\"])", function(r_name)
             local register = vim.fn.getreg(r_name)
             if not register or register:match("^%s*$") then
-                error("Prompt uses $register_" .. r_name .. " but register " ..
-                          r_name .. " is empty")
+                vim.schedule(function()
+                    vim.notify("Prompt uses $register_" .. r_name .. " but register " .. r_name .. " is empty", vim.log.levels.WARN)
+                end)
+                register_error = true
+                return ""
             end
             return register
         end)
+        if register_error then
+            return nil
+        end
 
         if string.find(text, "%$register") then
             local register = vim.fn.getreg('"')
             if not register or register:match("^%s*$") then
-                error("Prompt uses $register but yank register is empty")
+                vim.schedule(function()
+                    vim.notify("Prompt uses $register but yank register is empty", vim.log.levels.WARN)
+                end)
+                return nil
             end
-
             text = string.gsub(text, "%$register", register)
         end
 
@@ -352,6 +374,7 @@ M.exec = function(options)
         return text
     end
 
+    ---@type string|nil
     local prompt = opts.prompt
 
     if type(prompt) == "function" then
@@ -362,10 +385,11 @@ M.exec = function(options)
     end
 
     prompt = substitute_placeholders(prompt)
-    if prompt == "" then return "" end
+    if prompt == nil then return end
 
     if type(opts.extract) == "string" then
         opts.extract = substitute_placeholders(opts.extract)
+        if prompt == nil then return end
     end
 
     prompt = string.gsub(prompt, "%%", "%%%%")
