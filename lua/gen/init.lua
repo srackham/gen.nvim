@@ -311,6 +311,14 @@ M.exec = function(options)
                                "\n")
 
     end
+
+    if content == nil or content:match("^%s*$") then
+        vim.schedule(function()
+            vim.notify("Gen.nvim warning: No $text selected.", vim.log.levels.WARN)
+        end)
+        return
+    end
+
     local function substitute_placeholders(input)
         if not input then return input end
         local text = input
