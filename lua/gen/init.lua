@@ -107,14 +107,30 @@ local function close_window(opts)
         lines = vim.split(globals.result_string, "\n", {trimempty = true})
     end
     lines = trim_table(lines)
-    vim.api.nvim_buf_set_text(globals.curr_buffer, globals.start_pos[2] - 1,
-                              globals.start_pos[3] - 1, globals.end_pos[2] - 1,
-                              globals.end_pos[3] > globals.start_pos[3] and
-                                  globals.end_pos[3] or globals.end_pos[3] - 1,
-                              lines)
-    -- in case another replacement happens
-    globals.end_pos[2] = globals.start_pos[2] + #lines - 1
-    globals.end_pos[3] = string.len(lines[#lines])
+    
+    -- Handle different replace options
+    if opts.replace == true then
+        -- Original behavior: replace selected text
+        vim.api.nvim_buf_set_text(globals.curr_buffer, globals.start_pos[2] - 1,
+                                  globals.start_pos[3] - 1, globals.end_pos[2] - 1,
+                                  globals.end_pos[3] > globals.start_pos[3] and
+                                      globals.end_pos[3] or globals.end_pos[3] - 1,
+                                  lines)
+        -- in case another replacement happens
+        globals.end_pos[2] = globals.start_pos[2] + #lines - 1
+        globals.end_pos[3] = string.len(lines[#lines])
+    elseif opts.replace == "before" then
+        -- Insert before the selected text (line-wise)
+        local start_line = globals.start_pos[2] - 1
+        vim.api.nvim_buf_set_lines(globals.curr_buffer, start_line, start_line, false, lines)
+        -- Update end position to account for inserted lines
+        globals.end_pos[2] = globals.end_pos[2] + #lines
+    elseif opts.replace == "after" then
+        -- Insert after the selected text (line-wise)
+        local end_line = globals.end_pos[2]
+        vim.api.nvim_buf_set_lines(globals.curr_buffer, end_line, end_line, false, lines)
+    end
+    
     if not opts.no_auto_close then
         if globals.float_win ~= nil then
             vim.api.nvim_win_hide(globals.float_win)
