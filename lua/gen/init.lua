@@ -237,6 +237,12 @@ local function create_window(cmd, opts)
     elseif display_mode == "vertical-split" then
         vim.cmd("vnew gen.nvim")
         setup_window()
+    elseif display_mode == "horizontal-split-bottom" then
+        vim.cmd("botright split gen.nvim")
+        setup_window()
+    elseif display_mode == "vertical-split-right" then
+        vim.cmd("botright vnew gen.nvim")
+        setup_window()
     elseif display_mode == "no-split" then
         vim.cmd("edit gen.nvim")
         setup_window()
