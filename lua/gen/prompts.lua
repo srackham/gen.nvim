@@ -1,4 +1,4 @@
-return {
+local prompts = {
     Generate = { prompt = "$input", replace = true },
     Chat = { prompt = "$input" },
     Summarize = { prompt = "Summarize the following text:\n$text" },
@@ -41,3 +41,16 @@ return {
         extract = "```$filetype\n(.-)```",
     },
 }
+
+-- Check if user prompts file exists and merge with default prompts
+local user_prompts_path = vim.fn.stdpath("data") .. "/gen_nvim/default.prompts.lua"
+if vim.fn.filereadable(user_prompts_path) == 1 then
+    local user_prompts = dofile(user_prompts_path)
+    if type(user_prompts) == "table" then
+        for key, value in pairs(user_prompts) do
+            prompts[key] = value
+        end
+    end
+end
+
+return prompts
