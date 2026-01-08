@@ -53,49 +53,92 @@ local function parse_markdown_prompts(file_content)
     if lines[i]:match "^%-%-%-$" or lines[i]:match "^___$" then
       i = i + 1
       local options = {}
+      local has_name = false
 
       -- Parse header options until ending delimiter
+      local header_start_line = i - 1
       while i <= #lines and not (lines[i]:match "^%-%-%-$" or lines[i]:match "^___$") do
-        -- Skip lines beginning with #
-        if not lines[i]:match "^%s*#" then
+        -- Trim whitespace
+        lines[i] = lines[i]:match "^%s*(.-)%s*$"
+
+        -- Skip blank lines and HTML comment lines
+        if not lines[i]:match "^%s*$" and not lines[i]:match "^<!--.-?-->$" then
+          -- Check for malformed header option format
           local key, value = lines[i]:match "^([^:]+):%s*(.+)$"
-          if key and value then
-            -- Convert boolean values
-            if value == "true" then
-              options[key] = true
-            elseif value == "false" then
-              options[key] = false
-            else
-              options[key] = value
+
+          if not key or not value then
+            vim.notify("Malformed header option format at line " .. i .. ": " .. lines[i], vim.log.levels.ERROR)
+            return nil
+          end
+
+          -- Check option names
+          if not (key == "name" or key == "model" or key == "extract" or key == "replace") then
+            vim.notify(
+              "Invalid option name '" .. key .. "' at line " .. i .. ". Must be: name, model, extract or replace",
+              vim.log.levels.ERROR
+            )
+            return nil
+          end
+
+          -- Track if we have a name
+          if key == "name" then
+            has_name = true
+          end
+
+          -- Validate replace option
+          if key == "replace" and value ~= "true" and value ~= "false"  and value ~= "after"  and value ~= "before" then
+            vim.notify("Invalid replace value '" .. value .. "' at line " .. i .. ". Must be 'true' or 'false'", vim.log.levels.ERROR)
+            return nil
+          end
+
+          -- Convert values
+          if key == "replace" and (value == "true" or value == "false") then
+            options[key] = value == "true"
+          elseif key == "extract" then
+            -- Validate regex by attempting to compile it
+            local success, _ = pcall(string.match, "", value)
+            if not success then
+              vim.notify("Invalid regex in extract option at line " .. i .. ": " .. value, vim.log.levels.ERROR)
+              return nil
             end
+            options[key] = value
+          else
+            options[key] = value
           end
         end
         i = i + 1
       end
 
-      -- Skip the ending delimiter
-      if i <= #lines then
-        i = i + 1
+      -- Check for missing closing header line
+      if i > #lines or (not lines[i]:match "^%-%-%-$" and not lines[i]:match "^___$") then
+        vim.notify("Missing closing header line after header starting at line " .. header_start_line, vim.log.levels.ERROR)
+        return nil
       end
+
+      -- Check for missing name option
+      if not has_name then
+        vim.notify("Missing required 'name' option in header starting at line " .. header_start_line, vim.log.levels.ERROR)
+        return nil
+      end
+
+      -- Skip the ending delimiter
+      i = i + 1
 
       -- Collect the prompt text until next header or EOF
       local prompt_lines = {}
       while i <= #lines and not (lines[i]:match "^%-%-%-$" or lines[i]:match "^___$") do
-        -- Skip lines beginning with #
-        if not lines[i]:match "^%s*#" then
+        -- Skip HTML comment lines
+        if not lines[i]:match "^<!--.-?-->$" then
           table.insert(prompt_lines, lines[i])
         end
         i = i + 1
       end
 
-      -- If we have a name option, create the prompt entry
-      if options.name then
-        -- Convert name to valid Lua table key (replace spaces with underscores)
-        local key = options.name:gsub("%s+", "_")
-        options.name = nil -- Remove name from options since it's used as key
-        options.prompt = table.concat(prompt_lines, "\n")
-        result[key] = options
-      end
+      -- Create the prompt entry
+      local key = options.name:gsub("%s+", "_")
+      options.name = nil -- Remove name from options since it's used as key
+      options.prompt = table.concat(prompt_lines, "\n")
+      result[key] = options
     else
       i = i + 1
     end
@@ -105,15 +148,16 @@ local function parse_markdown_prompts(file_content)
 end
 
 -- Check if user prompts file exists and merge with default prompts
-local user_prompts_path = vim.fn.stdpath "data" .. "/gen_nvim/defaults.prompts.md"
+local user_prompts_path = vim.fn.stdpath "data" .. "/gen_nvim/default.prompts.md"
 if vim.fn.filereadable(user_prompts_path) == 1 then
   local file_content = vim.fn.readfile(user_prompts_path)
   if file_content then
     local user_prompts = parse_markdown_prompts(table.concat(file_content, "\n"))
-    if type(user_prompts) == "table" then
-      for key, value in pairs(user_prompts) do
-        prompts[key] = value
-      end
+    if user_prompts == nil then
+      return nil
+    end
+    for key, value in pairs(user_prompts) do
+      prompts[key] = value
     end
   end
 end

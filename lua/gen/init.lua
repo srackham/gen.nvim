@@ -1,4 +1,6 @@
 local prompts = require("gen.prompts")
+if prompts == nil then return end -- Abort if there are errors loading the prompts.
+
 local M = {}
 
 local globals = {}
@@ -107,7 +109,7 @@ local function close_window(opts)
         lines = vim.split(globals.result_string, "\n", {trimempty = true})
     end
     lines = trim_table(lines)
-    
+
     -- Handle different replace options
     if opts.replace == true then
         -- Original behavior: replace selected text
@@ -130,7 +132,7 @@ local function close_window(opts)
         local end_line = globals.end_pos[2]
         vim.api.nvim_buf_set_lines(globals.curr_buffer, end_line, end_line, false, lines)
     end
-    
+
     if not opts.no_auto_close then
         if globals.float_win ~= nil then
             vim.api.nvim_win_hide(globals.float_win)
