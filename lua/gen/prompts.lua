@@ -1,4 +1,6 @@
-local prompts = {
+local M = {}
+
+local builtin_prompts = {
   Generate = { prompt = "$input", replace = true },
   Chat = { prompt = "$input" },
   Summarize = { prompt = "Summarize the following text:\n$text" },
@@ -158,25 +160,33 @@ local function parse_markdown_prompts(file_content)
   return result
 end
 
--- Read and merge prompts from all .prompts.md files
-local prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/"
-local glob_pattern = prompts_dir .. "*.prompts.md"
-local prompt_files = vim.fn.glob(glob_pattern, false, true)
+function M.get_prompts(opts)
+  local prompts = {}
+  if not opts.custom_prompts_only then
+    print "CHECKPOINT 1"
+    prompts = builtin_prompts
+  end
+  -- Read and merge prompts from all .prompts.md files
+  local prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/"
+  local glob_pattern = prompts_dir .. "*.prompts.md"
+  local prompt_files = vim.fn.glob(glob_pattern, false, true)
 
-for _, file_path in ipairs(prompt_files) do
-  if vim.fn.filereadable(file_path) == 1 then
-    local file_content = vim.fn.readfile(file_path)
-    if file_content then
-      local user_prompts = parse_markdown_prompts(table.concat(file_content, "\n"))
-      if user_prompts then
-        for key, value in pairs(user_prompts) do
-          prompts[key] = value
+  for _, file_path in ipairs(prompt_files) do
+    if vim.fn.filereadable(file_path) == 1 then
+      local file_content = vim.fn.readfile(file_path)
+      if file_content then
+        local custom_prompts = parse_markdown_prompts(table.concat(file_content, "\n"))
+        if custom_prompts then
+          for key, value in pairs(custom_prompts) do
+            prompts[key] = value
+          end
+        else
+          notify("Failed to parse prompts from '" .. file_path .. "', skipping.", vim.log.levels.ERROR)
         end
-      else
-        notify("Failed to parse prompts from '" .. file_path .. "', skipping.", vim.log.levels.ERROR)
       end
     end
   end
+  return prompts
 end
 
-return prompts
+return M

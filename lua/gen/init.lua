@@ -71,11 +71,15 @@ local default_options = {
         table.sort(models)
         return models
     end,
-    result_filetype = "markdown"
+    result_filetype = "markdown",
+    custom_prompts_only = false,
 }
 for k, v in pairs(default_options) do M[k] = v end
 
-M.setup = function(opts) for k, v in pairs(opts) do M[k] = v end end
+M.setup = function(opts)
+  for k, v in pairs(opts) do M[k] = v end
+  M.prompts = prompts.get_prompts(M)
+end
 
 local function close_window(opts)
     local lines = {}
@@ -580,7 +584,6 @@ end
 
 M.win_config = {}
 
-M.prompts = prompts
 local function select_prompt(cb)
     -- Check if telescope is available
     local has_telescope = pcall(require, "telescope")
