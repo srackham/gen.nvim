@@ -42,6 +42,14 @@ local prompts = {
   },
 }
 
+-- Defer vim.notify until the event loop. Because calling vim.notify directly at the top level of a plugin
+-- triggers a stack trace because the Neovim UI hasn't fully initialized yet.
+local function notify(msg, level, opts)
+  vim.schedule(function()
+    vim.notify(msg, level, opts)
+  end)
+end
+
 -- Function to parse prompts from Markdown file
 local function parse_markdown_prompts(file_content)
   local result = {}
@@ -67,13 +75,13 @@ local function parse_markdown_prompts(file_content)
           local key, value = lines[i]:match "^([^:]+):%s*(.+)$"
 
           if not key or not value then
-            vim.notify("Malformed header option format at line " .. i .. ": " .. lines[i], vim.log.levels.ERROR)
+            notify("Malformed header option format at line " .. i .. ": " .. lines[i], vim.log.levels.ERROR)
             return nil
           end
 
           -- Check option names
           if not (key == "name" or key == "model" or key == "extract" or key == "replace") then
-            vim.notify(
+            notify(
               "Invalid option name '" .. key .. "' at line " .. i .. ". Must be: name, model, extract or replace",
               vim.log.levels.ERROR
             )
@@ -86,8 +94,11 @@ local function parse_markdown_prompts(file_content)
           end
 
           -- Validate replace option
-          if key == "replace" and value ~= "true" and value ~= "false"  and value ~= "after"  and value ~= "before" then
-            vim.notify("Invalid replace value '" .. value .. "' at line " .. i .. ". Must be 'true' or 'false'", vim.log.levels.ERROR)
+          if key == "replace" and value ~= "true" and value ~= "false" and value ~= "after" and value ~= "before" then
+            notify(
+              "Invalid replace value '" .. value .. "' at line " .. i .. ". Must be 'true','false','after' or 'before'",
+              vim.log.levels.ERROR
+            )
             return nil
           end
 
@@ -98,7 +109,7 @@ local function parse_markdown_prompts(file_content)
             -- Validate regex by attempting to compile it
             local success, _ = pcall(string.match, "", value)
             if not success then
-              vim.notify("Invalid regex in extract option at line " .. i .. ": " .. value, vim.log.levels.ERROR)
+              notify("Invalid regex in extract option at line " .. i .. ": " .. value, vim.log.levels.ERROR)
               return nil
             end
             options[key] = value
@@ -111,13 +122,13 @@ local function parse_markdown_prompts(file_content)
 
       -- Check for missing closing header line
       if i > #lines or (not lines[i]:match "^%-%-%-$" and not lines[i]:match "^___$") then
-        vim.notify("Missing closing header line after header starting at line " .. header_start_line, vim.log.levels.ERROR)
+        notify("Missing closing header line after header starting at line " .. header_start_line, vim.log.levels.ERROR)
         return nil
       end
 
       -- Check for missing name option
       if not has_name then
-        vim.notify("Missing required 'name' option in header starting at line " .. header_start_line, vim.log.levels.ERROR)
+        notify("Missing required 'name' option in header starting at line " .. header_start_line, vim.log.levels.ERROR)
         return nil
       end
 
@@ -147,17 +158,23 @@ local function parse_markdown_prompts(file_content)
   return result
 end
 
--- Check if user prompts file exists and merge with default prompts
-local user_prompts_path = vim.fn.stdpath "data" .. "/gen_nvim/default.prompts.md"
-if vim.fn.filereadable(user_prompts_path) == 1 then
-  local file_content = vim.fn.readfile(user_prompts_path)
-  if file_content then
-    local user_prompts = parse_markdown_prompts(table.concat(file_content, "\n"))
-    if user_prompts == nil then
-      return nil
-    end
-    for key, value in pairs(user_prompts) do
-      prompts[key] = value
+-- Read and merge prompts from all .prompts.md files
+local prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/"
+local glob_pattern = prompts_dir .. "*.prompts.md"
+local prompt_files = vim.fn.glob(glob_pattern, false, true)
+
+for _, file_path in ipairs(prompt_files) do
+  if vim.fn.filereadable(file_path) == 1 then
+    local file_content = vim.fn.readfile(file_path)
+    if file_content then
+      local user_prompts = parse_markdown_prompts(table.concat(file_content, "\n"))
+      if user_prompts then
+        for key, value in pairs(user_prompts) do
+          prompts[key] = value
+        end
+      else
+        notify("Failed to parse prompts from '" .. file_path .. "', skipping.", vim.log.levels.ERROR)
+      end
     end
   end
 end

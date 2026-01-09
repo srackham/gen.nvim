@@ -1,6 +1,4 @@
 local prompts = require("gen.prompts")
-if prompts == nil then return end -- Abort if there are errors loading the prompts.
-
 local M = {}
 
 local globals = {}
