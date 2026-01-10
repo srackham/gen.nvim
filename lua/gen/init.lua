@@ -279,6 +279,7 @@ local function create_window(cmd, opts)
 end
 
 M.exec = function(options)
+    local dot_prompt = vim.tbl_deep_extend("force", {}, options)
     local opts = vim.tbl_deep_extend("force", M, options)
     if opts.hidden then
         -- the only reasonable thing to do if no output can be seen
@@ -370,6 +371,7 @@ M.exec = function(options)
             }
             local replacement = placeholder_map[selection_index] or ""
             text = string.gsub(text, "%$select", replacement)
+            dot_prompt.prompt = text -- Remember the input source in the dot prompt
         end
 
         -- Handle the ${input:<prompt>} syntax
@@ -512,6 +514,7 @@ M.exec = function(options)
 
     M.run_command(cmd, opts)
 
+    M.prompts["."] = dot_prompt -- Update the dot prompt once execution has successfully completed
 end
 
 M.run_command = function(cmd, opts)
