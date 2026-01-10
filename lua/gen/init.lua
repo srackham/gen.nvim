@@ -345,11 +345,29 @@ M.exec = function(options)
     -- @return string|nil: The prompt with placeholders substituted, or nil if processing should abort
     local function substitute_placeholders(input)
         if not input then return nil end
+
+        -- Handle the ${input:<prompt>} syntax
         local text = input
+        local cancelled = false
+        text = string.gsub(text, "%${input:(.-)}", function(prompt_text)
+          local answer = vim.fn.input(prompt_text .. ": ")
+          if answer == "" then
+            cancelled = true
+          end
+          return answer
+        end)
+
+        if cancelled then
+            return nil
+        end
+
+        -- Handle the $input syntax
         if string.find(text, "%$input") then
-            local answer = vim.fn.input("Input: ")
-            if answer == "" then return nil end -- Abort if the is no user input
-            text = string.gsub(text, "%$input", answer)
+          local answer = vim.fn.input "Input: "
+          if answer == "" then
+            return nil
+          end
+          text = string.gsub(text, "%$input", answer)
         end
 
         text = string.gsub(text, "%$clipboard", "$register_+")
