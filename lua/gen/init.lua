@@ -347,8 +347,32 @@ M.exec = function(options)
     local function substitute_placeholders(input)
         if not input then return nil end
 
-        -- Handle the ${input:<prompt>} syntax
         local text = input
+
+        -- Handle the $select placeholder first
+        if string.find(text, "%$select") then
+            local selection_index = vim.fn.inputlist({
+                "Select input source:",
+                "1. Clipboard ($clipboard)",
+                "2. Yanked text ($yanked)",
+                "3. Buffer text ($text)",
+                "4. User input ($input)"
+            })
+            vim.cmd('redraw') -- Suppress the "Press ENTER or type command to continue" prompt
+            if not (selection_index > 0) then
+                return nil
+            end
+            local placeholder_map = {
+                [1] = "$clipboard",
+                [2] = "$yanked",
+                [3] = "$text",
+                [4] = "$input"
+            }
+            local replacement = placeholder_map[selection_index] or ""
+            text = string.gsub(text, "%$select", replacement)
+        end
+
+        -- Handle the ${input:<prompt>} syntax
         local cancelled = false
         text = string.gsub(text, "%${input:(.-)}", function(prompt_text)
           local answer = vim.fn.input(prompt_text .. ": ")
