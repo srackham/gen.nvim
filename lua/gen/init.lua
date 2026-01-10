@@ -336,6 +336,7 @@ M.exec = function(options)
     -- Placeholders processed:
     -- - `$input`: Prompts user for input and substitutes the value
     -- - `$clipboard`: Substitutes content of system clipboard (alias for `$register_+`)
+    -- - `$yanked`: Substitutes most recently yanked text (alias for `$register_0`)
     -- - `$register_<name>`: Substitutes content of specified register
     -- - `$register`: Substitutes content of default (unnamed) register
     -- - `$text`: Substitutes selected text content
@@ -371,6 +372,7 @@ M.exec = function(options)
         end
 
         text = string.gsub(text, "%$clipboard", "$register_+")
+        text = string.gsub(text, "%$yanked", "$register_0")
 
         local register_error = false
         text = string.gsub(text, "%$register_([%w*+:/\"])", function(r_name)
