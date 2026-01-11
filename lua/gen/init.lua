@@ -527,7 +527,7 @@ M.run_command = function(cmd, opts)
         end
     end
     local partial_data = ""
-    if opts.debug then print(cmd) end
+    if opts.debug then vim.print(cmd) end
 
     globals.job_id = vim.fn.jobstart(cmd, {
         -- stderr_buffered = opts.debug,
@@ -739,7 +739,7 @@ vim.api.nvim_create_user_command("Gen", function(arg)
     if arg.args ~= "" then
         local prompt = M.prompts[arg.args]
         if not prompt then
-            print("Invalid prompt '" .. arg.args .. "'")
+            vim.notify("Invalid prompt '" .. arg.args .. "'", vim.log.levels.ERROR)
             return
         end
         local p = vim.tbl_deep_extend("force", {mode = mode}, prompt)
@@ -846,7 +846,7 @@ M.select_model = function()
     local models = M.list_models(M)
     vim.ui.select(models, {prompt = "Model:"}, function(item)
         if item ~= nil then
-            print("Model set to " .. item)
+            vim.notify("Model set to " .. item, vim.log.levels.INFO)
             M.model = item
         end
     end)
