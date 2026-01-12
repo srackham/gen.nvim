@@ -73,6 +73,7 @@ local default_options = {
     end,
     result_filetype = "markdown",
     custom_prompts_only = false,
+    prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/prompts/",
 }
 for k, v in pairs(default_options) do M[k] = v end
 

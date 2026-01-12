@@ -158,7 +158,7 @@ function M.get_prompts(opts)
     prompts = builtin_prompts
   end
   -- Read and merge prompts from all .prompts.md files
-  local prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/"
+  local prompts_dir = opts.prompts_dir
   local glob_pattern = prompts_dir .. "*.prompts.md"
   local prompt_files = vim.fn.glob(glob_pattern, false, true)
 
