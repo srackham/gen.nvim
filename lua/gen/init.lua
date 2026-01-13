@@ -633,11 +633,20 @@ M.run_command = function(cmd, opts)
         for i = 1, #lines do
             lines[i] = "> " .. lines[i]
             table.insert(short_prompt, lines[i])
-            if i >= 3 and opts.show_prompt ~= "full" then
-                if #lines > i then
-                    table.insert(short_prompt, "...")
+            if type(opts.show_prompt) == "number" then
+                if i >= opts.show_prompt then
+                    if #lines > i then
+                        table.insert(short_prompt, "...")
+                    end
+                    break
                 end
-                break
+            elseif opts.show_prompt ~= "full" then
+                if i >= 3 then
+                    if #lines > i then
+                        table.insert(short_prompt, "...")
+                    end
+                    break
+                end
             end
         end
         local heading = "#"
