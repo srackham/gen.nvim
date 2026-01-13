@@ -75,6 +75,7 @@ local default_options = {
     custom_prompts_only = false,
     prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/prompts/",
     response_register = nil,
+    text_selection_only = false,
 }
 for k, v in pairs(default_options) do M[k] = v end
 
@@ -435,6 +436,16 @@ M.exec = function(options)
                 return nil
             end
             text = string.gsub(text, "%$register", register)
+        end
+
+        if string.find(text, "%$text") then
+            -- Check if text_selection_only is enabled and we're not in visual mode
+            if opts.text_selection_only and (globals.start_pos == globals.end_pos) then
+                vim.schedule(function()
+                    vim.notify("No visual mode text selection (select visual mode prompt $text)", vim.log.levels.ERROR)
+                end)
+                return nil
+            end
         end
 
         content = string.gsub(content, "%%", "%%%%")
