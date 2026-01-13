@@ -281,9 +281,9 @@ local function create_window(cmd, opts)
             vim.fn.jobstop(globals.job_id)
             globals.job_id = nil
         end
-        vim.api.nvim_buf_set_option(buf, "modifiable", true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
-        vim.api.nvim_buf_set_option(buf, "modifiable", false)
+          vim.api.nvim_set_option_value("modifiable", true, {buf = buf})
+          vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
+          vim.api.nvim_set_option_value("modifiable", false, {buf = buf})
         -- vim.api.nvim_win_close(0, true)
         M.run_command(cmd, opts)
     end, {buffer = globals.result_buffer})
@@ -521,7 +521,13 @@ M.exec = function(options)
         if opts.file ~= nil then
             local json = opts.json(body, false)
             globals.temp_filename = os.tmpname()
-            local fhandle = io.open(globals.temp_filename, "w")
+            local fhandle, err = io.open(globals.temp_filename, "w")
+            if not fhandle then
+                vim.schedule(function()
+                    vim.notify("Error opening '" .. globals.temp_filename "': " .. (err or "unknown error"), vim.log.levels.ERROR)
+                end)
+                return nil
+            end
             fhandle:write(json)
             fhandle:close()
             cmd = string.gsub(cmd, "%$body", "@" .. globals.temp_filename)
@@ -579,12 +585,11 @@ M.run_command = function(cmd, opts)
             partial_data = table.remove(lines) or ""
 
             for _, line in ipairs(lines) do
-                Process_response(line, globals.job_id, opts.json_response)
+                Process_response(line, globals.job_id)
             end
 
             if partial_data:sub(-1) == "}" then
-                Process_response(partial_data, globals.job_id,
-                                 opts.json_response)
+                Process_response(partial_data, globals.job_id)
                 partial_data = ""
             end
         end,
