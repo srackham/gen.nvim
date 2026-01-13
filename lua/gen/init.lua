@@ -74,6 +74,7 @@ local default_options = {
     result_filetype = "markdown",
     custom_prompts_only = false,
     prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/prompts/",
+    response_register = nil,
 }
 for k, v in pairs(default_options) do M[k] = v end
 
@@ -113,7 +114,15 @@ local function close_window(opts)
     end
     lines = trim_table(lines)
 
+    -- Copy result string to register if response_register is set
+    if opts.response_register ~= nil then
+        vim.fn.setreg(opts.response_register, table.concat(lines, "\n"))
+    end
+
     -- Handle different replace options
+    if not opts.replace then
+        return
+    end
     if opts.replace == true then
         -- Original behavior: replace selected text
         vim.api.nvim_buf_set_text(globals.curr_buffer, globals.start_pos[2] - 1,
@@ -588,7 +597,7 @@ M.run_command = function(cmd, opts)
             end
         end,
         on_exit = function(_, b)
-            if b == 0 and opts.replace and globals.result_buffer then
+            if b == 0 and globals.result_buffer then
                 close_window(opts)
             end
         end
