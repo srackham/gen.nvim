@@ -102,6 +102,20 @@ local function append_file(path, text)
   end
 end
 
+local function log_header(opts)
+    local header = {}
+    table.insert(header,"___")
+    table.insert(header, "_date_: " .. os.date("%Y-%m-%d %H:%M:%S"))
+    table.insert(header, "_model_: " .. opts.model)
+    table.insert(header,"_prompt_:")
+    local lines = vim.split(opts.prompt, "\n")
+    for _, v in ipairs(trim_table(lines)) do
+        table.insert(header, v)
+    end
+    table.insert(header,"___")
+    return header
+end
+
 local function close_window(opts)
     local lines = {}
     if opts.extract then
@@ -140,7 +154,7 @@ local function close_window(opts)
 
     if opts.logs_dir then
         local log_file = opts.log_file(opts)
-        append_file(log_file, "\n___\n" .. table.concat(lines, "\n") .. "\n")
+        append_file(log_file, "\n" .. table.concat(log_header(opts), "\n") .. "\n" .. table.concat(lines, "\n") .. "\n")
     end
 
     -- Handle different replace options
