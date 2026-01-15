@@ -73,15 +73,30 @@ local default_options = {
     end,
     result_filetype = "markdown",
     custom_prompts_only = false,
-    prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/prompts/",
+    prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/prompts",
     response_register = nil,
     text_selection_only = false,
+    logs_dir = vim.fn.stdpath "data" .. "/gen_nvim/logs",
 }
 for k, v in pairs(default_options) do M[k] = v end
 
 M.setup = function(opts)
   for k, v in pairs(opts) do M[k] = v end
   M.prompts = prompts.get_prompts(M)
+end
+
+local function append_file(path, text)
+  local f,err = io.open(path, "a+")
+  if f then
+    f:write(text)
+    f:close()
+    return true
+  else
+    vim.schedule(function()
+        vim.notify("Error opening '" .. path .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
+    end)
+    return false
+  end
 end
 
 local function close_window(opts)
@@ -118,6 +133,11 @@ local function close_window(opts)
     -- Copy result string to register if response_register is set
     if opts.response_register ~= nil then
         vim.fn.setreg(opts.response_register, table.concat(lines, "\n"))
+    end
+
+    if opts.logs_dir then
+        local log_file= opts.logs_dir .. "/gen_nvim.log.md"
+        append_file(log_file, table.concat(lines, "\n") .. "\n")
     end
 
     -- Handle different replace options
@@ -524,7 +544,7 @@ M.exec = function(options)
             local fhandle, err = io.open(globals.temp_filename, "w")
             if not fhandle then
                 vim.schedule(function()
-                    vim.notify("Error opening '" .. globals.temp_filename "': " .. (err or "unknown error"), vim.log.levels.ERROR)
+                    vim.notify("Error opening '" .. globals.temp_filename .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
                 end)
                 return nil
             end

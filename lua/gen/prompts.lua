@@ -159,7 +159,7 @@ function M.get_prompts(opts)
   end
   -- Read and merge prompts from all .prompts.md files
   local prompts_dir = opts.prompts_dir
-  local glob_pattern = prompts_dir .. "*.prompts.md"
+  local glob_pattern = prompts_dir .. "/*.prompts.md"
   local prompt_files = vim.fn.glob(glob_pattern, false, true)
 
   for _, file_path in ipairs(prompt_files) do
