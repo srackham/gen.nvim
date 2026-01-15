@@ -77,6 +77,9 @@ local default_options = {
     response_register = nil,
     text_selection_only = false,
     logs_dir = vim.fn.stdpath "data" .. "/gen_nvim/logs",
+    log_file = function (opts)
+        return opts.logs_dir .. "/gen_nvim.log.md"
+     end,
 }
 for k, v in pairs(default_options) do M[k] = v end
 
@@ -136,8 +139,8 @@ local function close_window(opts)
     end
 
     if opts.logs_dir then
-        local log_file= opts.logs_dir .. "/gen_nvim.log.md"
-        append_file(log_file, table.concat(lines, "\n") .. "\n")
+        local log_file = opts.log_file(opts)
+        append_file(log_file, "\n___\n" .. table.concat(lines, "\n") .. "\n")
     end
 
     -- Handle different replace options
