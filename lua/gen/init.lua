@@ -483,7 +483,7 @@ M.exec = function(options)
             -- Check if text_selection_only is enabled and we're not in visual mode
             if opts.text_selection_only and (globals.start_pos == globals.end_pos) then
                 vim.schedule(function()
-                    vim.notify("No visual mode text selection (select visual mode prompt $text)", vim.log.levels.ERROR)
+                    vim.notify("No visual mode text selection (select $text in visual mode)", vim.log.levels.ERROR)
                 end)
                 return nil
             end
