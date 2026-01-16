@@ -161,6 +161,10 @@ local function close_window(opts)
     if not opts.replace then
         return
     end
+    if opts.replace == "before" or opts.replace == "after" then -- fence the result with rulers
+        table.insert(lines, 1, "___")
+        table.insert(lines, "___")
+    end
     if opts.replace == true then
         -- Original behavior: replace selected text
         vim.api.nvim_buf_set_text(globals.curr_buffer, globals.start_pos[2] - 1,
