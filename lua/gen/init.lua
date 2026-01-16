@@ -78,8 +78,13 @@ local default_options = {
     text_selection_only = false,
     logs_dir = vim.fn.stdpath "data" .. "/gen_nvim/logs",
     log_file = function (opts)
-        return opts.logs_dir .. "/gen_nvim.log.md"
+        if opts.log_rollover == "daily" then
+            return opts.logs_dir .. "/gen-" .. os.date("%Y-%m-%d") ..".log.md"
+        else
+            return opts.logs_dir .. "/gen.log.md"
+        end
      end,
+    log_rollover = nil, -- nil (default) or "daily"
 }
 for k, v in pairs(default_options) do M[k] = v end
 
