@@ -51,6 +51,7 @@ local default_options = {
     quit_map = "q",
     accept_map = "<c-cr>",
     retry_map = "<c-r>",
+    close_map = "<c-x>",
     hidden = false,
     command = function(options)
         return "curl -q --silent --no-buffer -X POST http://" .. options.host ..
@@ -280,6 +281,7 @@ local function create_window(cmd, opts)
         vim.api.nvim_set_option_value("wrap", true, {win = globals.float_win})
         vim.api.nvim_set_option_value("linebreak", true,
                                       {win = globals.float_win})
+        vim.api.nvim_set_option_value("swapfile", false, {buf = globals.result_buffer})
     end
 
     local display_mode = opts.display_mode or M.display_mode
@@ -334,6 +336,18 @@ local function create_window(cmd, opts)
         -- vim.api.nvim_win_close(0, true)
         M.run_command(cmd, opts)
     end, {buffer = globals.result_buffer})
+    vim.keymap.set("n", M.close_map, function()
+        if globals.float_win ~= nil then
+            local wins = vim.api.nvim_list_wins()
+            if #wins > 1 then
+                vim.api.nvim_win_hide(globals.float_win)
+            end
+        end
+        if globals.result_buffer ~= nil then
+            vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
+        end
+        reset()
+    end, {buffer = globals.result_buffer, desc = "Close the response window and clear the model context"})
 end
 
 M.exec = function(options)
