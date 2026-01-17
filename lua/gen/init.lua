@@ -2,11 +2,13 @@ local prompts = require("gen.prompts")
 local M = {}
 
 local globals = {}
-local function reset(keep_selection)
-    if not keep_selection then
+local function reset(keep_selection_and_context)
+    vim.print('gen.nvim: reset')
+    if not keep_selection_and_context then
         globals.curr_buffer = nil
         globals.start_pos = nil
         globals.end_pos = nil
+        globals.context = nil
     end
     if globals.job_id then
         vim.fn.jobstop(globals.job_id)
@@ -15,7 +17,6 @@ local function reset(keep_selection)
     globals.result_buffer = nil
     globals.float_win = nil
     globals.result_string = ""
-    globals.context = nil
     globals.context_buffer = nil
     if globals.temp_filename then
         os.remove(globals.temp_filename)
@@ -674,7 +675,7 @@ M.run_command = function(cmd, opts)
             if globals.result_buffer then
                 vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
             end
-            reset(true) -- keep selection in case of subsequent retries
+            reset(true) -- keep selection and context
         end
     })
 
