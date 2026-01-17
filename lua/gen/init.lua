@@ -567,11 +567,10 @@ M.exec = function(options)
         local body = vim.tbl_extend("force",
                                     {model = opts.model, stream = true},
                                     opts.body)
-        local messages = {}
-        if globals.context then messages = globals.context end
         -- Add new prompt to the context
-        table.insert(messages, {role = "user", content = prompt})
-        body.messages = messages
+        globals.context = globals.context or {}
+        table.insert(globals.context, {role = "user", content = prompt})
+        body.messages = globals.context
         if M.model_options ~= nil then -- llamacpp server - model options: eg. temperature, top_k, top_p
             body = vim.tbl_extend("force", body, M.model_options)
         end
