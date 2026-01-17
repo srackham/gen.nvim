@@ -3,7 +3,6 @@ local M = {}
 
 local globals = {}
 local function reset(keep_selection_and_context)
-    vim.print('gen.nvim: reset')
     if not keep_selection_and_context then
         globals.curr_buffer = nil
         globals.start_pos = nil
