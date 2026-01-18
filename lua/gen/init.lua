@@ -7,13 +7,14 @@ local function reset(keep_selection_and_context)
         globals.curr_buffer = nil
         globals.start_pos = nil
         globals.end_pos = nil
-        globals.context = nil
+        globals.context = {}
+        globals.response_lines = {}
     end
     if globals.job_id then
         vim.fn.jobstop(globals.job_id)
         globals.job_id = nil
     end
-    globals.result_buffer = nil
+    globals.result_buffer = nil -- Response buffer number
     globals.float_win = nil
     globals.result_string = ""
     globals.context_buffer = nil
@@ -266,11 +267,20 @@ local function write_to_buffer(lines)
 
     vim.api.nvim_set_option_value("modifiable", false,
                                   {buf = globals.result_buffer})
+
+    -- Save response window lines.
+    for _, v in pairs(lines) do
+        table.insert(all_lines, v)
+    end
+    globals.response_lines = all_lines
 end
 
 local function create_window(cmd, opts)
     local function setup_window()
         globals.result_buffer = vim.fn.bufnr("%")
+        vim.api.nvim_set_option_value("modifiable", true, {buf = globals.result_buffer})
+        vim.api.nvim_buf_set_lines(globals.result_buffer, 0, -1, false, globals.response_lines)
+        vim.api.nvim_set_option_value("modifiable", false, {buf = globals.result_buffer})
         globals.float_win = vim.fn.win_getid()
         vim.api.nvim_set_option_value("filetype", opts.result_filetype,
                                       {buf = globals.result_buffer})
