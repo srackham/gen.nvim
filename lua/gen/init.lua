@@ -256,13 +256,12 @@ local function write_to_buffer(lines)
                               last_row - 1, last_col, vim.split(text, "\n"))
 
     if globals.float_win ~= nil and vim.api.nvim_win_is_valid(globals.float_win) then
-        local cursor_pos = vim.api.nvim_win_get_cursor(globals.float_win)
-
-        -- Move the cursor to the end of the new lines
-        if cursor_pos[1] == last_row then
-            local new_last_row = last_row + #lines - 1
-            vim.api.nvim_win_set_cursor(globals.float_win, {new_last_row, 0})
-        end
+        -- Move the cursor to the last character in the buffer
+        local buf = vim.api.nvim_win_get_buf(globals.float_win)
+        last_row = vim.api.nvim_buf_line_count(buf)
+        local last_line = vim.api.nvim_buf_get_lines(buf, last_row - 1, last_row, false)[1] or ""
+        last_col = math.max(#last_line - 1, 0)
+        vim.api.nvim_win_set_cursor(globals.float_win, { last_row, last_col })
     end
 
     vim.api.nvim_set_option_value("modifiable", false,
