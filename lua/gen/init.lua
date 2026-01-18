@@ -14,8 +14,8 @@ local function reset(keep_selection_and_context)
         vim.fn.jobstop(globals.job_id)
         globals.job_id = nil
     end
-    globals.result_buffer = nil -- Response buffer number
-    globals.float_win = nil
+    globals.result_buffer = nil -- Replace buffer number
+    globals.float_win = nil -- Response buffer number
     globals.result_string = ""
     globals.context_buffer = nil
     if globals.temp_filename then
@@ -947,8 +947,16 @@ end
 
 M.select_model = function()
     local models = M.list_models(M)
+    for i, v in pairs(models) do
+        if v == M.model then -- Highlight current model
+            models[i] = "* " .. v
+        else
+            models[i] = "  " .. v
+        end
+    end
     vim.ui.select(models, {prompt = "Model:"}, function(item)
         if item ~= nil then
+            item = string.sub(item, 3)
             vim.notify("Model set to " .. item, vim.log.levels.INFO)
             M.model = item
         end
