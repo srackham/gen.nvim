@@ -4,7 +4,7 @@ local M = {}
 local globals = {}
 local function reset(keep_selection_and_context)
     if not keep_selection_and_context then
-        globals.curr_buffer = nil
+        globals.curr_buffer = nil -- Replacement buffer number
         globals.start_pos = nil
         globals.end_pos = nil
         globals.context = {}
@@ -14,14 +14,15 @@ local function reset(keep_selection_and_context)
         vim.fn.jobstop(globals.job_id)
         globals.job_id = nil
     end
-    globals.result_buffer = nil -- Replace buffer number
-    globals.float_win = nil -- Response buffer number
+    globals.result_buffer = nil -- Response buffer number
+    globals.float_win = nil -- Response window number
     globals.result_string = ""
     globals.context_buffer = nil
     if globals.temp_filename then
         os.remove(globals.temp_filename)
         globals.temp_filename = nil
     end
+    globals.server_cmd = nil -- The most recent curl command to the Ollama server.
 end
 reset()
 
@@ -284,6 +285,19 @@ local function write_to_buffer(lines)
     globals.response_lines = all_lines
 end
 
+local function cursor_to_end(win_id)
+    if win_id ~= nil and vim.api.nvim_win_is_valid(win_id) then
+        -- Move the cursor to the last character in the response buffer
+        local buf = vim.api.nvim_win_get_buf(win_id)
+        local last_row = vim.api.nvim_buf_line_count(buf)
+        local last_line = vim.api.nvim_buf_get_lines(buf, last_row - 1, last_row, false)[1] or ""
+        local last_col = math.max(#last_line - 1, 0)
+        vim.api.nvim_win_set_cursor(win_id, { last_row, last_col })
+        -- Focus response window
+        vim.api.nvim_set_current_win(win_id)
+    end
+end
+
 local function create_window(cmd, opts)
     local function setup_window()
         globals.result_buffer = vim.fn.bufnr("%")
@@ -291,6 +305,7 @@ local function create_window(cmd, opts)
         vim.api.nvim_buf_set_lines(globals.result_buffer, 0, -1, false, globals.response_lines)
         vim.api.nvim_set_option_value("modifiable", false, {buf = globals.result_buffer})
         globals.float_win = vim.fn.win_getid()
+        cursor_to_end(globals.float_win)
         vim.api.nvim_set_option_value("filetype", opts.result_filetype,
                                       {buf = globals.result_buffer})
         vim.api.nvim_set_option_value("buftype", "nofile",
@@ -342,7 +357,7 @@ local function create_window(cmd, opts)
         close_window(opts)
     end, {buffer = globals.result_buffer})
     vim.keymap.set("n", M.retry_map, function()
-        local buf = 0 -- Current buffer
+        local buf = 0 -- Current buffer i.e. response buffer
         if globals.job_id then
             vim.fn.jobstop(globals.job_id)
             globals.job_id = nil
@@ -387,28 +402,23 @@ M.exec = function(options)
         end
     end
 
-    local content
-    if globals.start_pos == globals.end_pos then
-        -- get text from whole buffer
-        content = table.concat(vim.api.nvim_buf_get_lines(globals.curr_buffer,
-                                                          0, -1, false), "\n")
-    else
-        content = table.concat(vim.api.nvim_buf_get_text(globals.curr_buffer,
-                                                         globals.start_pos[2] -
-                                                             1,
-                                                         globals.start_pos[3] -
-                                                             1,
-                                                         globals.end_pos[2] - 1,
-                                                         globals.end_pos[3], {}),
-                               "\n")
-
-    end
-
-    if content == nil or content:match("^%s*$") then
-        vim.schedule(function()
-            vim.notify("Prompt uses $text but no text is selected", vim.log.levels.WARN)
-        end)
-        return
+    local selected_text = ""
+    if globals.curr_buffer ~= nil then
+        if globals.start_pos == globals.end_pos then
+            -- get text from whole buffer
+            selected_text = table.concat(vim.api.nvim_buf_get_lines(globals.curr_buffer,
+                                                              0, -1, false), "\n")
+        else
+            selected_text = table.concat(vim.api.nvim_buf_get_text(globals.curr_buffer,
+                                                             globals.start_pos[2] -
+                                                                 1,
+                                                             globals.start_pos[3] -
+                                                                 1,
+                                                             globals.end_pos[2] - 1,
+                                                             globals.end_pos[3], {}),
+                                                            "\n")
+        end
+        if selected_text:match("^%s*$") then selected_text = "" end
     end
 
     --- Substitutes placeholders in the prompt with actual values.
@@ -486,13 +496,14 @@ M.exec = function(options)
             local register = vim.fn.getreg(r_name)
             if not register or register:match("^%s*$") then
                 vim.schedule(function()
-                    vim.notify("Prompt uses $register_" .. r_name .. " but register " .. r_name .. " is empty", vim.log.levels.WARN)
+                    vim.notify("Prompt uses $register_" .. r_name .. " but register " .. r_name .. " is empty", vim.log.levels.ERROR)
                 end)
                 register_error = true
                 return ""
             end
             return register
         end)
+
         if register_error then
             return nil
         end
@@ -501,7 +512,7 @@ M.exec = function(options)
             local register = vim.fn.getreg('"')
             if not register or register:match("^%s*$") then
                 vim.schedule(function()
-                    vim.notify("Prompt uses $register but yank register is empty", vim.log.levels.WARN)
+                    vim.notify("Prompt uses $register but yank register is empty", vim.log.levels.ERROR)
                 end)
                 return nil
             end
@@ -516,10 +527,18 @@ M.exec = function(options)
                 end)
                 return nil
             end
+
+            if selected_text == "" then
+                vim.schedule(function()
+                    vim.notify("Prompt uses $text but no text is selected", vim.log.levels.ERROR)
+                end)
+                return nil
+            end
+
+            selected_text = string.gsub(selected_text, "%%", "%%%%")
+            text = string.gsub(text, "%$text", selected_text)
         end
 
-        content = string.gsub(content, "%%", "%%%%")
-        text = string.gsub(text, "%$text", content)
         text = string.gsub(text, "%$filetype", vim.bo.filetype)
         return text
     end
@@ -528,7 +547,7 @@ M.exec = function(options)
     local prompt = opts.prompt
 
     if type(prompt) == "function" then
-        prompt = prompt({content = content, filetype = vim.bo.filetype})
+        prompt = prompt({content = selected_text, filetype = vim.bo.filetype})
         if type(prompt) ~= 'string' or string.len(prompt) == 0 then
             return
         end
@@ -613,8 +632,10 @@ M.exec = function(options)
     M.prompts["."] = dot_prompt -- Update the dot prompt once execution has successfully completed
 end
 
+-- Run curl command
 M.run_command = function(cmd, opts)
     -- vim.print('run_command', cmd, opts)
+    globals.server_cmd = cmd
     if globals.result_buffer == nil or globals.float_win == nil or
         not vim.api.nvim_win_is_valid(globals.float_win) then
         create_window(cmd, opts)
@@ -736,7 +757,7 @@ M.run_command = function(cmd, opts)
     })
 end
 
-M.win_config = {}
+M.win_config = {} -- Currently unused
 
 local function select_prompt(cb)
     -- Check if telescope is available
@@ -845,6 +866,13 @@ vim.api.nvim_create_user_command("Gen", function(arg)
             close_response_window_and_buffer()
             reset()
             return
+        elseif arg.args == "/open" then
+            if globals.float_win ~= nil and vim.api.nvim_win_is_valid(globals.float_win) then
+                cursor_to_end(globals.float_win)
+            else
+                create_window(globals.server_cmd,M)
+            end
+            return
         else
             local prompt = M.prompts[arg.args]
             if not prompt then
@@ -871,6 +899,7 @@ end, {
             table.insert(gen_args, k)
         end
         table.insert(gen_args, "/close")
+        table.insert(gen_args, "/open")
 
         for _, arg in pairs(gen_args) do
             if arg:lower():match("^" .. ArgLead:lower()) then
