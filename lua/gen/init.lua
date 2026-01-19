@@ -14,7 +14,10 @@ local function reset(keep_selection_and_context)
         vim.fn.jobstop(globals.job_id)
         globals.job_id = nil
     end
-    globals.result_buffer = nil -- Response buffer number
+    if globals.result_buffer ~= nil then
+        vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
+        globals.result_buffer = nil -- Response buffer number
+    end
     globals.float_win = nil -- Response window number
     globals.result_string = ""
     globals.context_buffer = nil
@@ -124,15 +127,13 @@ local function log_header(opts)
     return header
 end
 
-local function close_response_window_and_buffer()
-    if globals.float_win ~= nil then
+local function close_response_window()
+    if globals.float_win ~= nil and vim.api.nvim_win_is_valid(globals.float_win) then
         local wins = vim.api.nvim_list_wins()
         if #wins > 1 then
             vim.api.nvim_win_hide(globals.float_win)
+            globals.float_win = nil
         end
-    end
-    if globals.result_buffer ~= nil then
-        vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
     end
 end
 
@@ -210,7 +211,7 @@ local function close_window(opts)
     end
 
     if not opts.no_auto_close then
-        close_response_window_and_buffer()
+        close_response_window()
         reset()
     end
 end
@@ -369,7 +370,7 @@ local function create_window(cmd, opts)
         M.run_command(cmd, opts)
     end, {buffer = globals.result_buffer})
     vim.keymap.set("n", M.close_map, function()
-        close_response_window_and_buffer()
+        close_response_window()
         reset()
     end, {buffer = globals.result_buffer, desc = "Close the response window and clear the model context"})
 end
@@ -861,18 +862,27 @@ vim.api.nvim_create_user_command("Gen", function(arg)
     else
         mode = "v"
     end
+    ::do_command::
     if arg.args ~= "" then
         if arg.args == "/close" then
-            close_response_window_and_buffer()
+            close_response_window()
             reset()
             return
         elseif arg.args == "/open" then
             if globals.float_win ~= nil and vim.api.nvim_win_is_valid(globals.float_win) then
                 cursor_to_end(globals.float_win)
             else
-                create_window(globals.server_cmd,M)
+                create_window(globals.server_cmd, M)
             end
             return
+        elseif arg.args == "/toggle" then
+            if globals.float_win ~= nil and vim.api.nvim_win_is_valid(globals.float_win) then
+                close_response_window()
+                return
+            else
+                arg.args = "/open"
+                goto do_command
+            end
         else
             local prompt = M.prompts[arg.args]
             if not prompt then
@@ -900,6 +910,7 @@ end, {
         end
         table.insert(gen_args, "/close")
         table.insert(gen_args, "/open")
+        table.insert(gen_args, "/toggle")
 
         for _, arg in pairs(gen_args) do
             if arg:lower():match("^" .. ArgLead:lower()) then
