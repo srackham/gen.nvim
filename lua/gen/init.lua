@@ -123,6 +123,20 @@ local function log_header(opts)
     return header
 end
 
+local function close_response_window_and_buffer()
+    if globals.float_win ~= nil then
+        local wins = vim.api.nvim_list_wins()
+        if #wins > 1 then
+            vim.api.nvim_win_hide(globals.float_win)
+        end
+    end
+    if globals.result_buffer ~= nil then
+        vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
+    end
+end
+
+-- Process the response (`globals.result_string`).
+-- Handles optional extraction (`opts.extract`) replacement (`opts.replace`), logging (`opts.logs_dir`),
 local function close_window(opts)
     local lines = {}
     if opts.extract then
@@ -195,12 +209,7 @@ local function close_window(opts)
     end
 
     if not opts.no_auto_close then
-        if globals.float_win ~= nil then
-            vim.api.nvim_win_hide(globals.float_win)
-        end
-        if globals.result_buffer ~= nil then
-            vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
-        end
+        close_response_window_and_buffer()
         reset()
     end
 end
@@ -345,15 +354,7 @@ local function create_window(cmd, opts)
         M.run_command(cmd, opts)
     end, {buffer = globals.result_buffer})
     vim.keymap.set("n", M.close_map, function()
-        if globals.float_win ~= nil then
-            local wins = vim.api.nvim_list_wins()
-            if #wins > 1 then
-                vim.api.nvim_win_hide(globals.float_win)
-            end
-        end
-        if globals.result_buffer ~= nil then
-            vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
-        end
+        close_response_window_and_buffer()
         reset()
     end, {buffer = globals.result_buffer, desc = "Close the response window and clear the model context"})
 end
@@ -840,13 +841,19 @@ vim.api.nvim_create_user_command("Gen", function(arg)
         mode = "v"
     end
     if arg.args ~= "" then
-        local prompt = M.prompts[arg.args]
-        if not prompt then
-            vim.notify("Invalid prompt '" .. arg.args .. "'", vim.log.levels.ERROR)
+        if arg.args == "/close" then
+            close_response_window_and_buffer()
+            reset()
             return
+        else
+            local prompt = M.prompts[arg.args]
+            if not prompt then
+                vim.notify("Invalid prompt '" .. arg.args .. "'", vim.log.levels.ERROR)
+                return
+            end
+            local p = vim.tbl_deep_extend("force", {mode = mode}, prompt)
+            return M.exec(p)
         end
-        local p = vim.tbl_deep_extend("force", {mode = mode}, prompt)
-        return M.exec(p)
     end
     select_prompt(function(item)
         if not item then return end
@@ -857,14 +864,21 @@ end, {
     range = true,
     nargs = "?",
     complete = function(ArgLead)
-        local promptKeys = {}
-        for key, _ in pairs(M.prompts) do
-            if key:lower():match("^" .. ArgLead:lower()) then
-                table.insert(promptKeys, key)
+        local completion_candidates = {}
+        local gen_args = {}
+
+        for k, _ in pairs(M.prompts) do
+            table.insert(gen_args, k)
+        end
+        table.insert(gen_args, "/close")
+
+        for _, arg in pairs(gen_args) do
+            if arg:lower():match("^" .. ArgLead:lower()) then
+                table.insert(completion_candidates, arg)
             end
         end
-        table.sort(promptKeys)
-        return promptKeys
+        table.sort(completion_candidates)
+        return completion_candidates
     end
 })
 
