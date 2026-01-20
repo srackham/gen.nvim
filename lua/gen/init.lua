@@ -91,6 +91,7 @@ local default_options = {
         end
      end,
     log_rollover = nil, -- nil (default) or "daily"
+    float_layout = { width = 0.8, height = 0.5, border = "single", } -- Floating response window layout
 }
 for k, v in pairs(default_options) do M[k] = v end
 
@@ -216,35 +217,35 @@ local function close_window(opts)
     end
 end
 
-local function get_window_options(opts)
-    local cursor = vim.api.nvim_win_get_cursor(0)
-    local new_win_width = vim.api.nvim_win_get_width(0)
-    local win_height = vim.api.nvim_win_get_height(0)
+local function get_window_options(win_config)
+    -- Get editor dimensions
+    ---@diagnostic disable-next-line: undefined-field
+    local editor_width = vim.opt.columns:get()
+    ---@diagnostic disable-next-line: undefined-field
+    local editor_height = vim.opt.lines:get()
 
-    local middle_row = win_height / 2
+    -- Calculate target dimensions for the floating window
+    local float_width = math.floor(editor_width * win_config.width)
+    local float_height = math.floor(editor_height * win_config.height)
 
-    local new_win_height = math.floor(win_height / 2)
-    local new_win_row
-    if cursor[1] <= middle_row then
-        new_win_row = 5
-    else
-        new_win_row = -5 - new_win_height
-    end
+    -- Ensure dimensions are at least 1
+    float_width = math.max(1, float_width)
+    float_height = math.max(1, float_height)
 
+    -- Calculate row and column for centering
+    local float_row = math.floor((editor_height - float_height) / 2)
+    local float_col = math.floor((editor_width - float_width) / 2)
+
+    -- Update the floating window configuration
     local result = {
-        relative = "cursor",
-        width = new_win_width,
-        height = new_win_height,
-        row = new_win_row,
-        col = 0,
-        style = "minimal",
-        border = "rounded"
+      width = float_width,
+      height = float_height,
+      row = float_row,
+      col = float_col,
+      relative = 'editor', -- Relative to the main editor area
+      style = "minimal",
+      border = win_config.border
     }
-
-    local version = vim.version()
-    if version.major > 0 or version.minor >= 10 then
-        result.hide = opts.hidden
-    end
 
     return result
 end
@@ -322,11 +323,9 @@ local function create_window(cmd, opts)
         if globals.result_buffer then
             vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
         end
-        local win_opts = vim.tbl_deep_extend("force", get_window_options(opts),
-                                             opts.win_config)
         globals.result_buffer = vim.api.nvim_create_buf(false, true)
-        globals.float_win = vim.api.nvim_open_win(globals.result_buffer, true,
-                                                  win_opts)
+        local win_config = get_window_options(opts.float_layout)
+        globals.float_win = vim.api.nvim_open_win(globals.result_buffer, true, win_config)
         setup_window()
     elseif display_mode == "horizontal-split" then
         vim.cmd("split gen.nvim")
@@ -757,8 +756,6 @@ M.run_command = function(cmd, opts)
         on_detach = function() globals.result_buffer = nil end
     })
 end
-
-M.win_config = {} -- Currently unused
 
 local function select_prompt(cb)
     -- Check if telescope is available
