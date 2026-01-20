@@ -120,21 +120,20 @@ local function response_header(opts)
     table.insert(header, "_model_: " .. opts.model)
 
     if opts.show_prompt then
+        if opts.show_prompt == true then opts.show_prompt = 3 end -- Default truncation size
         table.insert(header,"_prompt_:")
         local prompt_lines = vim.split(opts.prompt, "\n")
+        local fenced = false
         for i = 1, #prompt_lines do
             table.insert(header, prompt_lines[i])
+            if prompt_lines[i]:sub(1, 3) == "```" then
+                fenced = not fenced
+            end
             if type(opts.show_prompt) == "number" then
                 if i >= opts.show_prompt then
                     if #prompt_lines > i then
                         table.insert(header, "...")
-                    end
-                    break
-                end
-            elseif opts.show_prompt ~= "full" then
-                if i >= 3 then -- Minimum of 3 prompt lines in header
-                    if #prompt_lines > i then
-                        table.insert(header, "...")
+                        if fenced then table.insert(header, "```") end
                     end
                     break
                 end
@@ -142,7 +141,6 @@ local function response_header(opts)
         end
     end
 
-    -- header = trim_table(header)
     table.insert(header,"___")
     table.insert(header,"")
     table.insert(header,"")
