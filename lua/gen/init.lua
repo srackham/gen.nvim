@@ -51,7 +51,6 @@ local default_options = {
     debug = false,
     body = {stream = true},
     show_prompt = false,
-    show_model = false,
     quit_map = "q",
     accept_map = "<c-cr>",
     retry_map = "<c-r>",
@@ -114,17 +113,39 @@ local function append_file(path, text)
   end
 end
 
-local function log_header(opts)
+local function response_header(opts)
     local header = {}
     table.insert(header,"___")
     table.insert(header, "_date_: " .. os.date("%Y-%m-%d %H:%M:%S"))
     table.insert(header, "_model_: " .. opts.model)
-    table.insert(header,"_prompt_:")
-    local lines = vim.split(opts.prompt, "\n")
-    for _, v in ipairs(trim_table(lines)) do
-        table.insert(header, v)
+
+    if opts.show_prompt then
+        table.insert(header,"_prompt_:")
+        local prompt_lines = vim.split(opts.prompt, "\n")
+        for i = 1, #prompt_lines do
+            table.insert(header, prompt_lines[i])
+            if type(opts.show_prompt) == "number" then
+                if i >= opts.show_prompt then
+                    if #prompt_lines > i then
+                        table.insert(header, "...")
+                    end
+                    break
+                end
+            elseif opts.show_prompt ~= "full" then
+                if i >= 3 then -- Minimum of 3 prompt lines in header
+                    if #prompt_lines > i then
+                        table.insert(header, "...")
+                    end
+                    break
+                end
+            end
+        end
     end
+
+    -- header = trim_table(header)
     table.insert(header,"___")
+    table.insert(header,"")
+    table.insert(header,"")
     return header
 end
 
@@ -178,7 +199,7 @@ local function close_window(opts)
 
     if opts.logs_dir then
         local log_file = opts.log_file(opts)
-        append_file(log_file, "\n" .. table.concat(log_header(opts), "\n") .. "\n" .. table.concat(lines, "\n") .. "\n")
+        append_file(log_file, "\n" .. table.concat(response_header(opts), "\n") .. table.concat(lines, "\n") .. "\n")
     end
 
     -- Handle different replace options
@@ -625,8 +646,6 @@ M.exec = function(options)
         end
     end
 
-    if globals.context ~= nil then write_to_buffer({"", "", "---", ""}) end
-
     M.run_command(cmd, opts)
 
     M.prompts["."] = dot_prompt -- Update the dot prompt once execution has successfully completed
@@ -639,9 +658,6 @@ M.run_command = function(cmd, opts)
     if globals.result_buffer == nil or globals.float_win == nil or
         not vim.api.nvim_win_is_valid(globals.float_win) then
         create_window(cmd, opts)
-        if opts.show_model then
-            write_to_buffer({"# Chat with " .. opts.model, ""})
-        end
     end
     local partial_data = ""
     if opts.debug then vim.print(cmd) end
@@ -699,6 +715,7 @@ M.run_command = function(cmd, opts)
                 globals.result_string = globals.result_string ..
                                             table.concat(data, "\n")
                 local lines = vim.split(globals.result_string, "\n")
+                table.insert(lines,"")
                 write_to_buffer(lines)
             end
         end,
@@ -722,35 +739,7 @@ M.run_command = function(cmd, opts)
         end
     })
 
-    if opts.show_prompt then
-        local lines = vim.split(opts.prompt, "\n")
-        local short_prompt = {}
-        for i = 1, #lines do
-            lines[i] = "> " .. lines[i]
-            table.insert(short_prompt, lines[i])
-            if type(opts.show_prompt) == "number" then
-                if i >= opts.show_prompt then
-                    if #lines > i then
-                        table.insert(short_prompt, "...")
-                    end
-                    break
-                end
-            elseif opts.show_prompt ~= "full" then
-                if i >= 3 then
-                    if #lines > i then
-                        table.insert(short_prompt, "...")
-                    end
-                    break
-                end
-            end
-        end
-        local heading = "#"
-        if M.show_model then heading = "##" end
-        write_to_buffer({
-            heading .. " Prompt:", "", table.concat(short_prompt, "\n"), "",
-            "---", ""
-        })
-    end
+    write_to_buffer(response_header(opts))
 
     vim.api.nvim_buf_attach(globals.result_buffer, false, {
         on_detach = function() globals.result_buffer = nil end
@@ -943,6 +932,7 @@ function Process_response(str, json_response)
 
                 -- When the message sequence is complete, add it to the context
                 if result.done then
+                    write_to_buffer {"", "", ""}
                     table.insert(globals.context, {
                         role = "assistant",
                         content = globals.context_buffer
