@@ -198,4 +198,31 @@ function M.get_prompts(opts)
   return prompts
 end
 
+local prompt_syntax_rules = {
+  {
+    group = "MarkdownDirectiveRed",
+    cmd = [[match MarkdownDirectiveRed /\v^(name|model|extract|replace|prompt):/]],
+  },
+  {
+    group = "MarkdownVariableGreen",
+    cmd = [[match MarkdownVariableGreen /\v\$(text|input|select|clipboard|yanked|filetype|register_.|register)|\$\{input:.{-}\}/]],
+  },
+}
+
+vim.cmd([[
+  highlight default MarkdownDirectiveRed  gui=NONE  cterm=NONE  guifg=#ff5f5f ctermfg=Red
+  highlight default MarkdownVariableGreen gui=NONE  cterm=NONE  guifg=#5fff87 ctermfg=Green
+]])
+
+--- Add extra syntax prompt file highlighting rules to a specific buffer
+-- **NOTE**: Markdown Treesitter syntax highlighting takes precedence over custom syntax rules.
+-- @param bufnr integer
+function M.add_prompt_syntax_highlighting_rules(bufnr)
+  vim.api.nvim_buf_call(bufnr, function()
+    for _, rule in ipairs(prompt_syntax_rules) do
+      vim.cmd("syntax " .. rule.cmd) -- Define syntax group
+    end
+  end)
+end
+
 return M
