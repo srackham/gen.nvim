@@ -90,7 +90,8 @@ local default_options = {
         end
      end,
     log_rollover = nil, -- nil (default) or "daily"
-    float_layout = { width = 0.8, height = 0.5, border = "single", } -- Floating response window layout
+    response_window_layout = { width = 0.8, height = 0.5, border = "single", }, -- Floating response window layout
+    prompt_picker_layout = { width = 0.8, height = 0.5, },
 }
 for k, v in pairs(default_options) do M[k] = v end
 
@@ -348,7 +349,7 @@ local function create_window(cmd, opts)
             vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
         end
         globals.result_buffer = vim.api.nvim_create_buf(false, true)
-        local win_config = get_window_options(opts.float_layout)
+        local win_config = get_window_options(opts.response_window_layout)
         globals.float_win = vim.api.nvim_open_win(globals.result_buffer, true, win_config)
         setup_window()
     elseif display_mode == "horizontal-split" then
@@ -832,10 +833,7 @@ local function select_prompt(cb)
             end)
             return true
         end,
-        layout_config = {
-          width = 0.8,
-          height = 0.5,
-        },
+        layout_config = M.prompt_picker_layout
     }):find()
 end
 
