@@ -44,7 +44,17 @@ local builtin_prompts = {
   },
 }
 
--- Function to parse prompts from Markdown file
+--- Parses markdown-style prompt files into structured data.
+-- Each prompt section starts and ends with either `---` or `___`.
+-- Supported header options:
+--   - name (string, required): Unique identifier for the prompt.
+--   - model (string): Model name to use for this prompt.
+--   - extract (string): A regex pattern to extract content from input.
+--   - replace (string or boolean): Whether/how to replace matched content ('true', 'false', 'before', 'after').
+--
+-- @param file_content string The full content of the markdown prompt file as a string.
+-- @return table|nil Returns a table mapping prompt names to their config+prompt text,
+--                  or nil if parsing fails due to formatting errors.
 local function parse_markdown_prompts(file_content)
   local result = {}
   local lines = vim.split(file_content, "\n")
@@ -152,6 +162,14 @@ local function parse_markdown_prompts(file_content)
   return result
 end
 
+--- Get prompts from builtin sources and custom markdown files
+-- This function collects prompts from both builtin sources and custom
+-- markdown files located in the specified prompts directory.
+-- Custom prompts will override builtin prompts when they have the same key.
+-- @param opts table: Configuration options containing:
+--   - custom_prompts_only (boolean, optional): If true, only custom prompts are returned
+--   - prompts_dir (string): Directory path where custom .prompts.md files are located
+-- @return table: A dictionary of prompts where keys are prompt names and values are prompt content
 function M.get_prompts(opts)
   local prompts = {}
   if not opts.custom_prompts_only then
