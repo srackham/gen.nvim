@@ -217,12 +217,93 @@ vim.cmd([[
 --- Add extra syntax prompt file highlighting rules to a specific buffer
 -- **NOTE**: Markdown Treesitter syntax highlighting takes precedence over custom syntax rules.
 -- @param bufnr integer
-function M.add_prompt_syntax_highlighting_rules(bufnr)
+local function add_prompt_syntax_highlighting_rules(bufnr)
   vim.api.nvim_buf_call(bufnr, function()
     for _, rule in ipairs(prompt_syntax_rules) do
       vim.cmd("syntax " .. rule.cmd) -- Define syntax group
     end
   end)
+end
+
+--- Strip leading and trailing whitespace
+local function trim(s)
+    return s:match("^%s*(.-)%s*$")
+end
+
+--- Displays a telescope picker for selecting prompts
+-- @param callback function Callback function that receives the selected prompt key
+-- @param opts table Options table containing configuration
+-- @param opts.prompts table Table of prompt configurations keyed by prompt name
+-- @param opts.prompt_picker_layout table Layout configuration for the telescope picker
+function M.prompt_picker(callback, opts)
+    local actions = require "telescope.actions"
+    local action_state = require "telescope.actions.state"
+    local finders = require "telescope.finders"
+    local pickers = require "telescope.pickers"
+    local previewers = require "telescope.previewers"
+    local sorters = require "telescope.sorters"
+
+    -- Prepare prompt data for telescope
+    local prompt_list = {}
+    local prompt_keys = {}
+    for key, value in pairs(opts.prompts) do
+        table.insert(prompt_keys, key)
+        prompt_list[key] = value
+    end
+    table.sort(prompt_keys)
+
+    -- Create previewer that shows the prompt value
+    local prompt_previewer = previewers.new_buffer_previewer({
+        define_preview = function(self, entry)
+            local prompt_key = entry.value
+            local prompt_data = prompt_list[prompt_key]
+
+            if prompt_data then
+                local content = ""
+                content = content .. "name: " .. prompt_key:gsub("_", " ") .. "\n"
+                if prompt_data.model then content = content .. "model: " .. prompt_data.model .. "\n" end
+                if prompt_data.extract then content = content .. "extract: " .. prompt_data.extract .. "\n" end
+                if prompt_data.replace ~= nil then content = content .. "replace: " .. tostring(prompt_data.replace) .. "\n" end
+                content = content .. "prompt:\n"
+                if type(prompt_data.prompt) == "function" then
+                    content = content .. "Prompt function (cannot display)"
+                else
+                    content = content .. trim(prompt_data.prompt)
+                end
+                vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(content, "\n"))
+                -- vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })
+                add_prompt_syntax_highlighting_rules(self.state.bufnr)
+            end
+        end
+    })
+
+    -- Create and run the telescope picker
+    pickers.new({}, {
+        prompt_title = "Select Prompt",
+        finder = finders.new_table {
+            results = prompt_keys,
+            entry_maker = function(entry)
+                return {
+                    value = entry,
+                    display = table.concat(vim.split(entry, "_"), " "),
+                    ordinal = entry,
+                }
+            end
+        },
+        sorter = sorters.get_generic_fuzzy_sorter(),
+        previewer = prompt_previewer,
+        attach_mappings = function(prompt_bufnr)
+            actions.select_default:replace(function()
+                local selection = action_state.get_selected_entry()
+                actions.close(prompt_bufnr)
+                if selection then
+                    callback(selection.value)
+                end
+            end)
+            return true
+        end,
+        layout_config = opts.prompt_picker_layout
+    }):find()
 end
 
 return M
