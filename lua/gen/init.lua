@@ -113,6 +113,11 @@ local function append_file(path, text)
   end
 end
 
+--- Strip leading and trailing whitespace
+local function trim(s)
+    return s:match("^%s*(.-)%s*$")
+end
+
 local function response_header(opts)
     local header = {}
     table.insert(header,"___")
@@ -793,7 +798,7 @@ local function select_prompt(cb)
                 if type(prompt_data.prompt) == "function" then
                     content = content .. "Prompt function (cannot display)"
                 else
-                    content = content .. tostring(prompt_data.prompt)
+                    content = content .. trim(prompt_data.prompt)
                 end
                 vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(content, "\n"))
                 -- vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })
