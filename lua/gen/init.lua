@@ -119,7 +119,7 @@ end
 -- This group will be cleared once when the plugin is loaded
 vim.api.nvim_create_augroup("GenStatic", { clear = true })
 
--- Autocmd to reload prompts when a custom prompts file is saved
+-- Reload prompts when a prompts file is saved
 vim.api.nvim_create_autocmd("BufWritePost", {
   group = "GenStatic",
   pattern = M.prompts_dir .. "/*.prompts.md",
@@ -127,7 +127,15 @@ vim.api.nvim_create_autocmd("BufWritePost", {
     M.prompts = prompts.get_prompts(M)
     vim.notify("Gen.nvim prompts reloaded.", vim.log.levels.INFO)
   end,
-  desc = "Reload Gen.nvim prompts after saving a prompts file",
+})
+
+-- Set prompts syntax highlighting
+vim.api.nvim_create_autocmd({"BufReadPost", "BufNewFile"}, {
+  group = "GenStatic",
+  pattern = M.prompts_dir .. "/*.prompts.md",
+  callback = function(event)
+    prompts.add_prompt_syntax_highlighting_rules(event.buf)
+  end,
 })
 
 local function response_header(opts)

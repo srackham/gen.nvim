@@ -217,7 +217,7 @@ vim.cmd([[
 --- Add extra syntax prompt file highlighting rules to a specific buffer
 -- **NOTE**: Markdown Treesitter syntax highlighting takes precedence over custom syntax rules.
 -- @param bufnr integer
-local function add_prompt_syntax_highlighting_rules(bufnr)
+function M.add_prompt_syntax_highlighting_rules(bufnr)
   vim.api.nvim_buf_call(bufnr, function()
     for _, rule in ipairs(prompt_syntax_rules) do
       vim.cmd("syntax " .. rule.cmd) -- Define syntax group
@@ -272,7 +272,7 @@ function M.prompt_picker(callback, gen_opts)
                 end
                 vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(content, "\n"))
                 -- vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })
-                add_prompt_syntax_highlighting_rules(self.state.bufnr)
+                M.add_prompt_syntax_highlighting_rules(self.state.bufnr)
             end
         end
     })
@@ -358,19 +358,27 @@ function M.manage_prompts_files(gen_opts)
       end
     end
     table.sort(names)
-
-    table.insert(names, "") -- Blank entry
-    table.insert(names, "[Create new prompts file]")
+    table.insert(names,  string.rep("─", 100)) -- Full-width visual break
+    table.insert(names, "__NEW_FILE__")
     return names
   end
 
-  vim.ui.select(get_prompt_names_for_select_menu(), { prompt = "Manage Prompts:" }, function(selected_item)
+  vim.ui.select(get_prompt_names_for_select_menu(), {
+    prompt = "Manage prompts files",
+    format_item = function(item)
+      if item == "__NEW_FILE__" then
+        return "Create new prompts file…"
+      end
+      return item
+    end,
+  },
+  function(selected_item)
     if not selected_item or selected_item == "" then
-      vim.notify("Prompt management cancelled.", vim.log.levels.INFO)
+      vim.notify("Prompt file management cancelled.", vim.log.levels.INFO)
       return
     end
 
-    if selected_item == "[Create new prompts file]" then
+    if selected_item == "__NEW_FILE__" then
       vim.ui.input({ prompt = "Enter prompts file name:" }, function(new_name)
         if not new_name or new_name == "" then
           vim.notify("New prompts file creation cancelled.", vim.log.levels.INFO)
@@ -406,7 +414,7 @@ function M.manage_prompts_files(gen_opts)
       if action_index == 1 then -- Edit
         vim.cmd("edit " .. vim.fn.fnameescape(selected_file_path))
         local bufnr = vim.api.nvim_get_current_buf()
-        add_prompt_syntax_highlighting_rules(bufnr)
+        M.add_prompt_syntax_highlighting_rules(bufnr)
       elseif action_index == 2 then -- Rename
         vim.ui.input({ prompt = "Rename '" .. selected_item .. "' to: ", },
           function(new_name)
