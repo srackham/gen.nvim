@@ -232,10 +232,10 @@ end
 
 --- Displays a telescope picker for selecting prompts
 -- @param callback function Callback function that receives the selected prompt key
--- @param opts table Options table containing configuration
--- @param opts.prompts table Table of prompt configurations keyed by prompt name
--- @param opts.prompt_picker_layout table Layout configuration for the telescope picker
-function M.prompt_picker(callback, opts)
+-- @param gen_opts table Options table containing configuration
+-- @param gen_opts.prompts table Table of prompt configurations keyed by prompt name
+-- @param gen_opts.prompt_picker_layout table Layout configuration for the telescope picker
+function M.prompt_picker(callback, gen_opts)
     local actions = require "telescope.actions"
     local action_state = require "telescope.actions.state"
     local finders = require "telescope.finders"
@@ -246,7 +246,7 @@ function M.prompt_picker(callback, opts)
     -- Prepare prompt data for telescope
     local prompt_list = {}
     local prompt_keys = {}
-    for key, value in pairs(opts.prompts) do
+    for key, value in pairs(gen_opts.prompts) do
         table.insert(prompt_keys, key)
         prompt_list[key] = value
     end
@@ -302,8 +302,147 @@ function M.prompt_picker(callback, opts)
             end)
             return true
         end,
-        layout_config = opts.prompt_picker_layout
+        layout_config = gen_opts.prompt_picker_layout
     }):find()
+end
+
+-- Helper to get full path for a prompt name
+local function get_prompt_file_path(prompts_dir, name)
+  return prompts_dir .. "/" .. name .. ".prompts.md"
+end
+
+-- Helper to validate new prompts file name
+local function is_valid_filename(name)
+  -- Allowed characters: alphanumeric, '+', '-', ' ', '.', '_'
+  return name:match("^[a-zA-Z0-9%+%-% ._]+$") ~= nil
+end
+
+-- Helper to create a new prompts file with a basic template
+local function create_new_prompts_file_template(filepath, name)
+  local f, err = io.open(filepath, "w")
+  if not f then
+    vim.schedule(function()
+      vim.notify("Error creating file '" .. filepath .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
+    end)
+    return false
+  end
+  local display_name = name:gsub("_", " ")
+  local template_content = string.format(
+    "---\nname: %s\n---\n\nPrompt text for %s: $text",
+    display_name,
+    display_name
+  )
+  f:write(template_content)
+  f:close()
+  return true
+end
+
+--- Implements a file management menu for custom prompt files.
+-- @param gen_opts table: The main Gen.nvim configuration table (M from init.lua)
+function M.manage_prompts_files(gen_opts)
+  local prompts_dir = gen_opts.prompts_dir
+
+  -- Ensure prompts directory exists
+  vim.fn.mkdir(prompts_dir, "p")
+
+  local function get_prompt_names_for_select_menu()
+    local names = {}
+    local glob_pattern = prompts_dir .. "/*.prompts.md"
+    local prompt_files = vim.fn.glob(glob_pattern, false, true)
+
+    for _, file_path in ipairs(prompt_files) do
+      -- Extract base name without path and ".prompts.md" extension
+      local base_name = file_path:match(".*/(.-)%.prompts%.md$")
+      if base_name then
+        table.insert(names, base_name)
+      end
+    end
+    table.sort(names)
+
+    table.insert(names, "") -- Blank entry
+    table.insert(names, "[Create new prompts file]")
+    return names
+  end
+
+  vim.ui.select(get_prompt_names_for_select_menu(), { prompt = "Manage Prompts:" }, function(selected_item)
+    if not selected_item or selected_item == "" then
+      vim.notify("Prompt management cancelled.", vim.log.levels.INFO)
+      return
+    end
+
+    if selected_item == "[Create new prompts file]" then
+      vim.ui.input({ prompt = "Enter prompts file name:" }, function(new_name)
+        if not new_name or new_name == "" then
+          vim.notify("New prompts file creation cancelled.", vim.log.levels.INFO)
+          return
+        end
+
+        if not is_valid_filename(new_name) then
+          vim.notify("Invalid file name. Only alphanumeric, '+', '-', ' ', '.', '_' allowed.", vim.log.levels.ERROR)
+          return
+        end
+
+        local file_path = get_prompt_file_path(prompts_dir, new_name)
+        if vim.fn.filereadable(file_path) == 1 then
+          vim.notify("File '" .. file_path .. "' already exists.", vim.log.levels.ERROR)
+          return
+        end
+
+        if create_new_prompts_file_template(file_path, new_name) then
+          vim.notify("Created new prompts file: '" .. new_name .. "'", vim.log.levels.INFO)
+          vim.cmd("edit " .. vim.fn.fnameescape(file_path))
+        end
+        gen_opts.prompts = M.get_prompts(gen_opts) -- Reload prompts after changes
+      end)
+    else -- Existing prompts file selected
+      local selected_file_path = get_prompt_file_path(prompts_dir, selected_item)
+
+      local action_index = vim.fn.inputlist({ "1. Edit '" .. selected_item .. "' prompts file", "2. Rename '" .. selected_item .. "' prompts file", "3. Delete '" .. selected_item .. "' prompts file", })
+
+      if not action_index or action_index == 4 then
+        return
+      end
+
+      if action_index == 1 then -- Edit
+        vim.cmd("edit " .. vim.fn.fnameescape(selected_file_path))
+      elseif action_index == 2 then -- Rename
+        vim.ui.input({ prompt = "Rename '" .. selected_item .. "' to: ", },
+          function(new_name)
+            if not new_name or new_name == "" or new_name == selected_item then
+              return
+            end
+
+            if not is_valid_filename(new_name) then
+              vim.notify("Invalid file name. Only alphanumeric, '+', '-', ' ', '.', '_' allowed.", vim.log.levels.ERROR)
+              return
+            end
+
+            local new_file_path = get_prompt_file_path(prompts_dir, new_name)
+            if vim.fn.filereadable(new_file_path) == 1 then
+              vim.notify("File '" .. new_file_path .. "' already exists.", vim.log.levels.ERROR)
+              return
+            end
+
+            local success, err = os.rename(selected_file_path, new_file_path)
+            if not success then
+              vim.notify("Failed to rename file '" .. selected_item .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
+            end
+            gen_opts.prompts = M.get_prompts(gen_opts) -- Reload prompts after changes
+          end)
+      elseif action_index == 3 then -- Delete
+        local confirm_result = vim.fn.confirm("Delete '" .. selected_item .. "'?", "&Yes\n&No", 2)
+        if confirm_result == 1 then -- User selected 'Yes'
+          local success, err = os.remove(selected_file_path)
+          if success then
+            vim.notify("'" .. selected_item .. "' deleted", vim.log.levels.INFO)
+          else
+            vim.notify("Failed to delete file '" .. selected_item .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
+          end
+          gen_opts.prompts = M.get_prompts(gen_opts) -- Reload prompts after changes
+        end
+      end
+    end
+  end)
 end
 
 return M

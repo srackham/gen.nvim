@@ -793,6 +793,9 @@ vim.api.nvim_create_user_command("Gen", function(arg)
                 arg.args = "/open"
                 goto do_command
             end
+        elseif arg.args == "/prompts" then
+            prompts.manage_prompts_files(M)
+            return
         else
             local prompt = M.prompts[arg.args]
             if not prompt then
@@ -821,6 +824,7 @@ end, {
         table.insert(gen_args, "/reset")
         table.insert(gen_args, "/open")
         table.insert(gen_args, "/toggle")
+        table.insert(gen_args, "/prompts")
 
         for _, arg in pairs(gen_args) do
             if arg:lower():match("^" .. ArgLead:lower()) then
