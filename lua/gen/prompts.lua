@@ -405,6 +405,8 @@ function M.manage_prompts_files(gen_opts)
 
       if action_index == 1 then -- Edit
         vim.cmd("edit " .. vim.fn.fnameescape(selected_file_path))
+        local bufnr = vim.api.nvim_get_current_buf()
+        add_prompt_syntax_highlighting_rules(bufnr)
       elseif action_index == 2 then -- Rename
         vim.ui.input({ prompt = "Rename '" .. selected_item .. "' to: ", },
           function(new_name)
