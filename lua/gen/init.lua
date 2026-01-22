@@ -15,10 +15,11 @@ local function reset(keep_selection_and_context)
         globals.job_id = nil
     end
     if globals.result_buffer ~= nil then
-        vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
-        globals.result_buffer = nil -- Response buffer number
+        -- Clear the buffer.
+        vim.api.nvim_set_option_value("modifiable", true, {buf = globals.result_buffer})
+        vim.api.nvim_buf_set_lines(globals.result_buffer, 0, -1, false, { "", })
+        vim.api.nvim_set_option_value("modifiable", false, {buf = globals.result_buffer})
     end
-    globals.float_win = nil -- Response window number
     globals.result_string = ""
     globals.context_buffer = nil
     if globals.temp_filename then
@@ -383,7 +384,7 @@ local function create_window(cmd, opts)
             globals.job_id = nil
         end
           vim.api.nvim_set_option_value("modifiable", true, {buf = buf})
-          vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
+          vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "", })
           vim.api.nvim_set_option_value("modifiable", false, {buf = buf})
         -- vim.api.nvim_win_close(0, true)
         M.run_command(cmd, opts)
@@ -774,8 +775,7 @@ vim.api.nvim_create_user_command("Gen", function(arg)
     end
     ::do_command::
     if arg.args ~= "" then
-        if arg.args == "/close" then
-            close_response_window()
+        if arg.args == "/reset" then
             reset()
             return
         elseif arg.args == "/open" then
@@ -818,7 +818,7 @@ end, {
         for k, _ in pairs(M.prompts) do
             table.insert(gen_args, k)
         end
-        table.insert(gen_args, "/close")
+        table.insert(gen_args, "/reset")
         table.insert(gen_args, "/open")
         table.insert(gen_args, "/toggle")
 
