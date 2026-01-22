@@ -85,7 +85,7 @@ local default_options = {
     logs_dir = vim.fn.stdpath "data" .. "/gen_nvim/logs",
     log_file = function (opts)
         if opts.log_rollover == "daily" then
-            return opts.logs_dir .. "/gen-" .. os.date("%Y-%m-%d") ..".log.md"
+            return opts.logs_dir .. "/" .. os.date("%Y-%m-%d") ..".log.md"
         else
             return opts.logs_dir .. "/gen.log.md"
         end
