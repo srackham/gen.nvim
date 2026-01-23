@@ -1,3 +1,5 @@
+local utils = require("gen.utils")
+
 local M = {}
 
 local builtin_prompts = {
@@ -225,11 +227,6 @@ function M.add_prompt_syntax_highlighting_rules(bufnr)
   end)
 end
 
---- Strip leading and trailing whitespace
-local function trim(s)
-    return s:match("^%s*(.-)%s*$")
-end
-
 --- Displays a telescope picker for selecting prompts
 -- @param callback function Callback function that receives the selected prompt key
 -- @param gen_opts table Options table containing configuration
@@ -268,7 +265,7 @@ function M.prompt_picker(callback, gen_opts)
                 if type(prompt_data.prompt) == "function" then
                     content = content .. "Prompt function (cannot display)"
                 else
-                    content = content .. trim(prompt_data.prompt)
+                    content = content .. utils.trim(prompt_data.prompt)
                 end
                 vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(content, "\n"))
                 -- vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })

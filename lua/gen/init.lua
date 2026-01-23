@@ -1,4 +1,5 @@
 local prompts = require("gen.prompts")
+local utils = require("gen.utils")
 local M = {}
 
 local globals = {}
@@ -29,20 +30,6 @@ local function reset(keep_selection_and_context)
     globals.server_cmd = nil -- The most recent curl command to the Ollama server.
 end
 reset()
-
-local function trim_table(tbl)
-    local function is_whitespace(str) return str:match("^%s*$") ~= nil end
-
-    while #tbl > 0 and (tbl[1] == "" or is_whitespace(tbl[1])) do
-        table.remove(tbl, 1)
-    end
-
-    while #tbl > 0 and (tbl[#tbl] == "" or is_whitespace(tbl[#tbl])) do
-        table.remove(tbl, #tbl)
-    end
-
-    return tbl
-end
 
 local default_options = {
     model = "mistral",
@@ -166,7 +153,7 @@ local function response_header(opts)
         end
     end
 
-    header = trim_table(header)
+    header = utils.trim_table(header)
     table.insert(header,"___")
     return header
 end
@@ -212,7 +199,7 @@ local function close_window(opts)
     else
         lines = vim.split(globals.result_string, "\n", {trimempty = true})
     end
-    lines = trim_table(lines)
+    lines = utils.trim_table(lines)
 
     -- Copy result string to register if response_register is set
     if opts.response_register ~= nil then
@@ -330,19 +317,6 @@ local function write_to_buffer(lines)
     globals.response_lines = all_lines
 end
 
-local function cursor_to_end(win_id)
-    if win_id ~= nil and vim.api.nvim_win_is_valid(win_id) then
-        -- Move the cursor to the last character in the response buffer
-        local buf = vim.api.nvim_win_get_buf(win_id)
-        local last_row = vim.api.nvim_buf_line_count(buf)
-        local last_line = vim.api.nvim_buf_get_lines(buf, last_row - 1, last_row, false)[1] or ""
-        local last_col = math.max(#last_line - 1, 0)
-        vim.api.nvim_win_set_cursor(win_id, { last_row, last_col })
-        -- Focus response window
-        vim.api.nvim_set_current_win(win_id)
-    end
-end
-
 local function create_window(cmd, opts)
     local function setup_window()
         globals.result_buffer = vim.fn.bufnr("%")
@@ -350,7 +324,7 @@ local function create_window(cmd, opts)
         vim.api.nvim_buf_set_lines(globals.result_buffer, 0, -1, false, globals.response_lines)
         vim.api.nvim_set_option_value("modifiable", false, {buf = globals.result_buffer})
         globals.float_win = vim.fn.win_getid()
-        cursor_to_end(globals.float_win)
+        utils.cursor_to_end(globals.float_win)
         vim.api.nvim_set_option_value("filetype", opts.result_filetype,
                                       {buf = globals.result_buffer})
         vim.api.nvim_set_option_value("buftype", "nofile",
@@ -805,7 +779,7 @@ vim.api.nvim_create_user_command("Gen", function(arg)
             return
         elseif arg.args == "/open" then
             if globals.float_win ~= nil and vim.api.nvim_win_is_valid(globals.float_win) then
-                cursor_to_end(globals.float_win)
+                utils.cursor_to_end(globals.float_win)
             else
                 create_window(globals.server_cmd, M)
             end
