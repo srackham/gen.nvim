@@ -259,12 +259,12 @@ function M.prompt_picker(callback, gen_opts)
             local prompt_data = prompt_list[prompt_key]
 
             if prompt_data then
-                local content = ""
+                local content = string.rep("─", 40) .. "\n"
                 content = content .. "name: " .. prompt_key:gsub("_", " ") .. "\n"
                 if prompt_data.model then content = content .. "model: " .. prompt_data.model .. "\n" end
                 if prompt_data.extract then content = content .. "extract: " .. prompt_data.extract .. "\n" end
                 if prompt_data.replace ~= nil then content = content .. "replace: " .. tostring(prompt_data.replace) .. "\n" end
-                content = content .. "prompt:\n"
+                content = content .. string.rep("─", 40) .. "\n"
                 if type(prompt_data.prompt) == "function" then
                     content = content .. "Prompt function (cannot display)"
                 else

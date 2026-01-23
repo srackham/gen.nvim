@@ -166,9 +166,8 @@ local function response_header(opts)
         end
     end
 
+    header = trim_table(header)
     table.insert(header,"___")
-    table.insert(header,"")
-    table.insert(header,"")
     return header
 end
 
@@ -222,7 +221,7 @@ local function close_window(opts)
 
     if opts.logs_dir then
         local log_file = opts.log_file(opts)
-        append_file(log_file, "\n" .. table.concat(response_header(opts), "\n") .. table.concat(lines, "\n") .. "\n")
+        append_file(log_file, "\n" .. table.concat(response_header(opts), "\n") .. "\n" .. table.concat(lines, "\n") .. "\n")
     end
 
     -- Handle different replace options
@@ -765,6 +764,7 @@ M.run_command = function(cmd, opts)
     })
 
     write_to_buffer(response_header(opts))
+    write_to_buffer { "", "" }
 
     vim.api.nvim_buf_attach(globals.result_buffer, false, {
         on_detach = function() globals.result_buffer = nil end
