@@ -405,52 +405,71 @@ function M.manage_prompts_files(gen_opts)
     else -- Existing prompts file selected
       local selected_file_path = get_prompt_file_path(prompts_dir, selected_item)
 
-      local action_index = vim.fn.inputlist({ "1. Edit '" .. selected_item .. "' prompts file", "2. Rename '" .. selected_item .. "' prompts file", "3. Delete '" .. selected_item .. "' prompts file", })
-
-      if not action_index or action_index == 4 then
-        return
-      end
-
-      if action_index == 1 then -- Edit
-        vim.cmd("edit " .. vim.fn.fnameescape(selected_file_path))
-        local bufnr = vim.api.nvim_get_current_buf()
-        M.add_prompt_syntax_highlighting_rules(bufnr)
-      elseif action_index == 2 then -- Rename
-        vim.ui.input({ prompt = "Rename '" .. selected_item .. "' to: ", },
-          function(new_name)
-            if not new_name or new_name == "" or new_name == selected_item then
-              return
+      vim.ui.select(
+        {
+          "Edit '" .. selected_item .. "' prompts file",
+          "Rename '" .. selected_item .. "' prompts file",
+          "Delete '" .. selected_item .. "' prompts file",
+          string.rep("─", 100), -- Full-width visual break
+          "__QUIT__",
+        },
+        { prompt = "Action",
+          format_item = function(item)
+            if item == "__QUIT__" then
+              return "Quit (or press Esc)"
             end
-
-            if not is_valid_filename(new_name) then
-              vim.notify("Invalid file name. Only alphanumeric, '+', '-', ' ', '.', '_' allowed.", vim.log.levels.ERROR)
-              return
-            end
-
-            local new_file_path = get_prompt_file_path(prompts_dir, new_name)
-            if vim.fn.filereadable(new_file_path) == 1 then
-              vim.notify("File '" .. new_file_path .. "' already exists.", vim.log.levels.ERROR)
-              return
-            end
-
-            local success, err = os.rename(selected_file_path, new_file_path)
-            if not success then
-              vim.notify("Failed to rename file '" .. selected_item .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
-            end
-            gen_opts.prompts = M.get_prompts(gen_opts) -- Reload prompts after changes
-          end)
-      elseif action_index == 3 then -- Delete
-        local confirm_result = vim.fn.confirm("Delete '" .. selected_item .. "'?", "&Yes\n&No", 2)
-        if confirm_result == 1 then -- User selected 'Yes'
-          local success, err = os.remove(selected_file_path)
-          if success then
-            vim.notify("'" .. selected_item .. "' deleted", vim.log.levels.INFO)
-          else
-            vim.notify("Failed to delete file '" .. selected_item .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
+            return item
+          end,
+        },
+        function(action)
+          if not action then -- User cancelled
+            return
           end
-          gen_opts.prompts = M.get_prompts(gen_opts) -- Reload prompts after changes
+
+          if action:match("^Edit") then -- Edit
+            vim.cmd("edit " .. vim.fn.fnameescape(selected_file_path))
+            local bufnr = vim.api.nvim_get_current_buf()
+            M.add_prompt_syntax_highlighting_rules(bufnr)
+          elseif action:match("^Rename") then -- Rename
+            vim.ui.input({ prompt = "Rename '" .. selected_item .. "' to: ", },
+              function(new_name)
+                if not new_name or new_name == "" or new_name == selected_item then
+                  return
+                end
+
+                if not is_valid_filename(new_name) then
+                  vim.notify("Invalid file name. Only alphanumeric, '+', '-', ' ', '.', '_' allowed.", vim.log.levels.ERROR)
+                  return
+                end
+
+                local new_file_path = get_prompt_file_path(prompts_dir, new_name)
+                if vim.fn.filereadable(new_file_path) == 1 then
+                  vim.notify("File '" .. new_file_path .. "' already exists.", vim.log.levels.ERROR)
+                  return
+                end
+
+                local success, err = os.rename(selected_file_path, new_file_path)
+                if not success then
+                  vim.notify("Failed to rename file '" .. selected_item .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
+                else
+                  vim.notify("Renamed '" .. selected_item .. "' to '" .. new_name .. "'", vim.log.levels.INFO)
+                end
+                gen_opts.prompts = M.get_prompts(gen_opts) -- Reload prompts after changes
+              end)
+          elseif action:match("^Delete") then -- Delete
+            local confirm_result = vim.fn.confirm("Delete '" .. selected_item .. "'?", "&Yes\n&No", 2)
+            if confirm_result == 1 then -- User selected 'Yes'
+              local success, err = os.remove(selected_file_path)
+              if success then
+                vim.notify("'" .. selected_item .. "' deleted", vim.log.levels.INFO)
+              else
+                vim.notify("Failed to delete file '" .. selected_item .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
+              end
+              gen_opts.prompts = M.get_prompts(gen_opts) -- Reload prompts after changes
+            end
+          end
         end
-      end
+      )
     end
   end)
 end
