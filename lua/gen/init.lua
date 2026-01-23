@@ -771,25 +771,17 @@ vim.api.nvim_create_user_command("Gen", function(arg)
     else
         mode = "v"
     end
-    ::do_command::
     if arg.args ~= "" then
         if arg.args == "/reset" then
             reset()
             return
-        elseif arg.args == "/open" then
-            if globals.float_win ~= nil and vim.api.nvim_win_is_valid(globals.float_win) then
-                utils.cursor_to_end(globals.float_win)
-            else
-                create_window(globals.server_cmd, M)
-            end
-            return
-        elseif arg.args == "/toggle" then
+        elseif arg.args == "/responses" then
             if globals.float_win ~= nil and vim.api.nvim_win_is_valid(globals.float_win) then
                 close_response_window()
                 return
             else
-                arg.args = "/open"
-                goto do_command
+                create_window(globals.server_cmd, M)
+                return
             end
         elseif arg.args == "/prompts" then
             prompts.manage_prompts_files(M)
@@ -797,7 +789,7 @@ vim.api.nvim_create_user_command("Gen", function(arg)
         else
             local prompt = M.prompts[arg.args]
             if not prompt then
-                vim.notify("Invalid prompt '" .. arg.args .. "'", vim.log.levels.ERROR)
+                vim.notify("Invalid " .. (arg.args:sub(1, 1) == "/" and "command" or "prompt") .. "'" .. arg.args .. "'", vim.log.levels.ERROR)
                 return
             end
             local p = vim.tbl_deep_extend("force", {mode = mode}, prompt)
@@ -820,8 +812,7 @@ end, {
             table.insert(gen_args, k)
         end
         table.insert(gen_args, "/reset")
-        table.insert(gen_args, "/open")
-        table.insert(gen_args, "/toggle")
+        table.insert(gen_args, "/responses")
         table.insert(gen_args, "/prompts")
 
         for _, arg in pairs(gen_args) do
