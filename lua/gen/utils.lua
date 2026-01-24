@@ -43,4 +43,25 @@ function M.cursor_to_end(win_id)
     end
 end
 
+--- Synchronously select an item from a list using vim.ui.select
+-- This function wraps the asynchronous vim.ui.select API to provide
+-- a synchronous interface using coroutines.
+-- @param items table: List of items to choose from
+-- @param opts table|nil: Optional configuration options for the selector
+-- @return any|nil: The selected item, or nil if selection was cancelled
+-- @return number|nil: The index of the selected item, or nil if cancelled
+-- @throws error if not called from within a coroutine
+function M.ui_select_sync(items, opts)
+  local co = coroutine.running()
+  if not co then
+    error("ui_select_sync must be called from a coroutine")
+  end
+
+  vim.ui.select(items, opts, function(choice, idx)
+    coroutine.resume(co, choice, idx)
+  end)
+
+  return coroutine.yield()
+end
+
 return M

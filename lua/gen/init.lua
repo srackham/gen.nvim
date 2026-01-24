@@ -391,19 +391,6 @@ local function create_window(cmd, opts)
     end, {buffer = globals.result_buffer, desc = "Close the response window and clear the model context"})
 end
 
-local function ui_select_sync(items, opts)
-  local co = coroutine.running()
-  if not co then
-    error("ui_select_sync must be called from a coroutine")
-  end
-
-  vim.ui.select(items, opts, function(choice, idx)
-    coroutine.resume(co, choice, idx)
-  end)
-
-  return coroutine.yield()
-end
-
 M.exec = function(options)
 coroutine.wrap(function()
     local dot_prompt = vim.tbl_deep_extend("force", {}, options)
@@ -485,7 +472,7 @@ coroutine.wrap(function()
                 ["$yanked"] = "Yanked text ($yanked)",
                 ["__CANCEL__"] = "Cancel (or press Esc)",
             }
-            choice, _ = ui_select_sync(
+            choice, _ = utils.ui_select_sync(
               {
                 "$clipboard",
                 "$text",
