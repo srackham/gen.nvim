@@ -391,7 +391,21 @@ local function create_window(cmd, opts)
     end, {buffer = globals.result_buffer, desc = "Close the response window and clear the model context"})
 end
 
+local function ui_select_sync(items, opts)
+  local co = coroutine.running()
+  if not co then
+    error("ui_select_sync must be called from a coroutine")
+  end
+
+  vim.ui.select(items, opts, function(choice, idx)
+    coroutine.resume(co, choice, idx)
+  end)
+
+  return coroutine.yield()
+end
+
 M.exec = function(options)
+coroutine.wrap(function()
     local dot_prompt = vim.tbl_deep_extend("force", {}, options)
     local opts = vim.tbl_deep_extend("force", M, options)
     if opts.hidden then
@@ -460,28 +474,45 @@ M.exec = function(options)
 
         -- Handle the $select placeholder first
         if string.find(text, "%$select") then
-            local selection_index = vim.fn.inputlist({
-                "Select input source:",
-                "1. Clipboard ($clipboard)",
-                "2. Yanked text ($yanked)",
-                "3. Buffer text ($text)",
-                "4. User input ($input)"
-            })
-            vim.cmd('redraw') -- Suppress the "Press ENTER or type command to continue" prompt
-            if not (selection_index > 0) then
+            local choice
+
+            print("Opening menu...")
+
+            local items_map = {
+                ["$clipboard"] = "Clipboard ($clipboard)",
+                ["$text"] = "Selected text ($text)",
+                ["$input"] = "User input` ($input)",
+                ["$yanked"] = "Yanked text ($yanked)",
+                ["__CANCEL__"] = "Cancel (or press Esc)",
+            }
+            choice, _ = ui_select_sync(
+              {
+                "$clipboard",
+                "$text",
+                "$input",
+                "$yanked",
+                string.rep("─", 100), -- Full-width visual break
+                "__CANCEL__",
+              },
+              { prompt = "Select input source",
+                format_item = function(item)
+                  local item_text = items_map[item]
+                  if item_text ~= nil then
+                    return item_text
+                  end
+                  return item
+                end,
+              })
+
+            -- Arrive here after the user selection.
+            if not choice or choice == "__CANCEL__" then
                 return nil
             end
-            local placeholder_map = {
-                [1] = "$clipboard",
-                [2] = "$yanked",
-                [3] = "$text",
-                [4] = "$input"
-            }
-            local replacement = placeholder_map[selection_index] or ""
-            text = string.gsub(text, "%$select", replacement)
-            dot_prompt.prompt = text -- Remember the input source in the dot prompt
-            M.prompts["."] = dot_prompt -- Update the dot prompt once execution has successfully completed
+            text = string.gsub(text, "%$select", choice)
+            dot_prompt.prompt = text -- Remember the $select source in the dot prompt
         end
+
+        M.prompts["."] = dot_prompt -- Save the dot-prompt after the $select placeholder has been substituted
 
         -- Handle the ${input:<prompt>} syntax
         local cancelled = false
@@ -644,6 +675,7 @@ M.exec = function(options)
     end
 
     M.run_command(cmd, opts)
+end)()
 end
 
 -- Run curl command
