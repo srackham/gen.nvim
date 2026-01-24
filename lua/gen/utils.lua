@@ -26,6 +26,12 @@ function M.trim_table(tbl)
     return tbl
 end
 
+--- Checks if the current Vim mode is Visual ('v' or 'V').
+--- @return boolean true if in visual mode, false otherwise.
+function M.is_visual_mode()
+  return vim.fn.mode() == "v" or vim.fn.mode() == "V"
+end
+
 --- Move cursor to the end of the content in a Neovim window and focus it
 -- Positions the cursor at the last character of the last line in the window's buffer,
 -- then sets the window as the current (focused) window.

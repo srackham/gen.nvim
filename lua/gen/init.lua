@@ -443,6 +443,8 @@ coroutine.wrap(function()
     -- This function processes a prompt string and replaces special placeholders
     -- with their corresponding values from the current context.
     --
+    -- NOTE: Must be called from a coroutine.
+    --
     -- Placeholders processed:
     -- - `$input`: Prompts user for input and substitutes the value
     -- - `$clipboard`: Substitutes content of system clipboard (alias for `$register_+`)

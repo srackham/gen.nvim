@@ -408,12 +408,12 @@ function M.manage_prompts_files(gen_opts)
           "Rename '" .. selected_item .. "' prompts file",
           "Delete '" .. selected_item .. "' prompts file",
           string.rep("─", 100), -- Full-width visual break
-          "__QUIT__",
+          "__CANCEL__",
         },
         { prompt = "Action",
           format_item = function(item)
-            if item == "__QUIT__" then
-              return "Quit (or press Esc)"
+            if item == "__CANCEL__" then
+              return "Cancel (or press Esc)"
             end
             return item
           end,
