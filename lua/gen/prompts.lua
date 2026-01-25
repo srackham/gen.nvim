@@ -2,6 +2,14 @@ local utils = require("gen.utils")
 
 local M = {}
 
+--- @class Prompt
+--- @field prompt string|fun(context: table): string The prompt string or a function returning it.
+--- @field replace boolean|string|nil Whether/how to replace matched content ('true', 'false', 'before', 'after').
+--- @field extract string|nil A regex pattern to extract content from the model's response.
+--- @field model string|nil The model name to use for this prompt.
+--- @field source_file string|nil The file path where this prompt was defined, or "builtin".
+
+--- @type table<string, Prompt>
 local builtin_prompts = {
   Generate = { prompt = "$input", replace = true },
   Chat = { prompt = "$input" },
@@ -171,11 +179,11 @@ end
 -- @param opts table: Configuration options containing:
 --   - custom_prompts_only (boolean, optional): If true, only custom prompts are returned
 --   - prompts_dir (string): Directory path where custom .prompts.md files are located
--- @return table: A dictionary of prompts where keys are prompt names and values are prompt content
+-- @return table<string, Prompt> A dictionary of prompts where keys are prompt names and values are prompt content
 function M.get_prompts(opts)
-  local prompts = {}
+  local result = {}
   if not opts.custom_prompts_only then
-    prompts = builtin_prompts
+    result = builtin_prompts
   end
   -- Read and merge prompts from all .prompts.md files
   local prompts_dir = opts.prompts_dir
@@ -186,10 +194,11 @@ function M.get_prompts(opts)
     if vim.fn.filereadable(file_path) == 1 then
       local file_content = vim.fn.readfile(file_path)
       if file_content then
-        local custom_prompts = parse_markdown_prompts(table.concat(file_content, "\n"))
-        if custom_prompts then
-          for key, value in pairs(custom_prompts) do
-            prompts[key] = value
+        local prompts = parse_markdown_prompts(table.concat(file_content, "\n"))
+        if prompts then
+          for key, value in pairs(prompts) do
+            value.source_file = file_path
+            result[key] = value
           end
         else
           vim.notify("Failed to parse prompts from '" .. file_path .. "', skipping.", vim.log.levels.ERROR)
@@ -197,7 +206,7 @@ function M.get_prompts(opts)
       end
     end
   end
-  return prompts
+  return result
 end
 
 local prompt_syntax_rules = {
@@ -297,6 +306,22 @@ function M.prompt_picker(callback, gen_opts)
                     callback(selection.value)
                 end
             end)
+
+            vim.keymap.set("n", "e", function()
+              local selection = action_state.get_selected_entry()
+              if selection then
+                local prompt_key = selection.value
+                --- @type Prompt
+                local prompt_data = prompt_list[prompt_key]
+                if prompt_data and prompt_data.source_file then
+                  actions.close(prompt_bufnr)
+                  vim.cmd("edit " .. vim.fn.fnameescape(prompt_data.source_file))
+                else
+                  vim.notify("No file associated with built-in prompt '" .. prompt_key .. "'", vim.log.levels.INFO)
+                end
+              end
+            end, { buffer = prompt_bufnr, desc = "Edit prompt source file" })
+
             return true
         end,
         layout_config = gen_opts.prompt_picker_layout
