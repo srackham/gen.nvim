@@ -1,23 +1,15 @@
 local M = {}
 
 --- Strip leading and trailing whitespace from a string
--- @param s string The input string to trim
--- @return string The trimmed string
+--- @param s string The input string to trim
+--- @return string The trimmed string
 function M.trim(s)
     return s:match("^%s*(.-)%s*$")
 end
 
 --- Unescapes escape sequences in a string
--- @param s string The string to unescape
--- @return string The unescaped string
--- function M.unescape(s)
---   local f = load("return " .. string.format("%q", s))
---   return f()
--- end
-
---- Unescapes escape sequences in a string
--- @param str string The string to unescape
--- @return string The unescaped string
+--- @param str string The string to unescape
+--- @return string The unescaped string
 function M.unescape(str)
     local map = {
         ["n"] = "\n",
@@ -35,6 +27,76 @@ end
 --- Scheduled `vim.notify`.
 function M.notify(...)
     vim.schedule_wrap(vim.notify)(...)
+end
+
+--- Display a message using vim's echo interface
+--- Shows a message in the command line area with optional highlighting.
+--- This function wraps vim.api.nvim_echo with simplified parameter handling.
+--- @param msg string The message text to display
+--- @param opts table|nil Optional configuration table forwarded to vim.api.nvim_echo
+--- @param opts.hl_group string Highlight group name for the message (default: "Normal")
+--- @param opts.history boolean Whether to save the message to command history (default: false)
+--- @param opts.* any Additional options passed directly to vim.api.nvim_echo
+--- @usage
+--- M.message("Hello World")  -- displays with Normal highlight
+--- M.message("Error occurred", {hl_group = "ErrorMsg"})  -- displays with ErrorMsg highlight
+--- M.message("Command output", {history = true})  -- saves to command history
+function M.message(msg, opts)
+    opts = opts or {}
+    -- Copy `opts` to `echo_opts` and delete non vim.api.nvim_echo options
+    local echo_opts = vim.tbl_deep_extend("force", {}, opts)
+    echo_opts.hl_group=nil
+    echo_opts.history=nil
+    vim.api.nvim_echo({{ msg, opts.hl_group or "Normal" }}, opts.history or false, echo_opts)
+end
+
+--- Display a notification message with an animated spinner
+--- Creates a visual spinner animation that runs while processing occurs,
+--- and returns a function to stop the animation and display a completion message.
+--- The spinner uses Unicode braille characters for smooth animation.
+--- @param message string The message to display alongside the spinner
+--- @param opts table|nil Optional configuration table forwarded to M.message
+--- @param opts.interval number Animation frame interval in milliseconds (default: 100)
+--- @return function A stop function that halts the spinner and shows completion message
+--- @usage
+--- local stop_spinner = notify_with_spinner("Loading...", {interval = 50})
+--- -- ... some async work ...
+--- stop_spinner("Load complete!")
+function M.notify_with_spinner(message, opts)
+    opts = opts or {}
+    local spinner_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
+    local kill = false
+    local interval = opts.interval or 100
+    opts.interval = nil -- delete from opts because it is passed to M.message
+
+    -- 1. Create the coroutine logic
+    local co = coroutine.create(function()
+        local i = 1
+        while not kill do
+            local frame = spinner_frames[i]
+            M.message(frame .. " " .. message, opts)
+            i = i % #spinner_frames + 1
+            coroutine.yield()
+        end
+    end)
+
+    -- 2. Define the animation loop
+    local function run_animation()
+        if coroutine.status(co) ~= "dead" then
+            coroutine.resume(co)
+            -- Adjust the 100ms for faster/slower rotation
+            vim.defer_fn(run_animation, interval)
+        end
+    end
+
+    -- Start the animation
+    run_animation()
+
+    -- 3. Return a "stop" function to kill the loop
+    return function(done_message)
+        kill = true
+        M.message(done_message or "Done!", opts)
+    end
 end
 
 --- Remove empty/whitespace-only elements from the beginning and end of a table

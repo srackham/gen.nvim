@@ -664,7 +664,7 @@ M.run_command = function(cmd, opts)
     local partial_data = ""
     if opts.debug then vim.print(cmd) end
 
-    utils.notify("Generating...", vim.log.levels.INFO)
+    globals.stop_spinner = utils.notify_with_spinner("Generating...", { interval = 100, hl_group = "String" })
 
     globals.job_id = vim.fn.jobstart(cmd, {
         -- stderr_buffered = opts.debug,
@@ -869,7 +869,7 @@ function Process_response(str, json_response)
                     })
                     -- Clear the buffer as we're done with this sequence of messages
                     globals.context_buffer = ""
-                    utils.notify("", vim.log.levels.INFO) -- Clear "Generating..." message
+                    globals.stop_spinner()
                 end
             elseif result.choices then -- groq chat endpoint
                 local choice = result.choices[1]
