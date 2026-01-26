@@ -112,7 +112,7 @@ vim.api.nvim_create_autocmd("BufWritePost", {
   pattern = M.prompts_dir .. "/*.prompts.md",
   callback = function()
     M.prompts = prompts.get_prompts(M)
-    vim.notify("Gen.nvim prompts reloaded.", vim.log.levels.INFO)
+    -- vim.notify("Gen.nvim prompts reloaded.", vim.log.levels.INFO)
   end,
 })
 
@@ -465,8 +465,6 @@ coroutine.wrap(function()
         if string.find(text, "%$select") then
             local choice
 
-            print("Opening menu...")
-
             local items_map = {
                 ["$clipboard"] = "Clipboard ($clipboard)",
                 ["$text"] = "Selected text ($text)",
@@ -594,6 +592,7 @@ coroutine.wrap(function()
     prompt = substitute_placeholders(prompt)
     if prompt == nil then return end
 
+    -- substitute placeholders in the prompt `extract` field
     if type(opts.extract) == "string" then
         opts.extract = substitute_placeholders(opts.extract)
         if opts.extract == nil then return end
@@ -669,7 +668,6 @@ end
 
 -- Run curl command
 M.run_command = function(cmd, opts)
-    -- vim.print('run_command', cmd, opts)
     globals.server_cmd = cmd
     if globals.result_buffer == nil or globals.float_win == nil or
         not vim.api.nvim_win_is_valid(globals.float_win) then
