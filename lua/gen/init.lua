@@ -596,7 +596,7 @@ coroutine.wrap(function()
 
     if type(opts.extract) == "string" then
         opts.extract = substitute_placeholders(opts.extract)
-        if prompt == nil then return end
+        if opts.extract == nil then return end
     end
 
     prompt = string.gsub(prompt, "%%", "%%%%")
