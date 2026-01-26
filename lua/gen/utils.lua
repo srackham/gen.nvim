@@ -32,6 +32,11 @@ function M.unescape(str)
     end)
 end
 
+--- Scheduled `vim.notify`.
+function M.notify(...)
+    vim.schedule_wrap(vim.notify)(...)
+end
+
 --- Remove empty/whitespace-only elements from the beginning and end of a table
 -- This function modifies the table in-place by removing empty strings or 
 -- strings containing only whitespace from the start and end of the table.

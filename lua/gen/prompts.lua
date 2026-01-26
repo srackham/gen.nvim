@@ -344,9 +344,7 @@ end
 local function create_new_prompts_file_template(filepath, name)
   local f, err = io.open(filepath, "w")
   if not f then
-    vim.schedule(function()
-      vim.notify("Error creating file '" .. filepath .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
-    end)
+      utils.notify("Error creating file '" .. filepath .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
     return false
   end
   local display_name = name:gsub("_", " ")

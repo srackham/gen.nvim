@@ -95,9 +95,7 @@ local function append_file(path, text)
     f:close()
     return true
   else
-    vim.schedule(function()
-        vim.notify("Error opening '" .. path .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
-    end)
+    utils.notify("Error opening '" .. path .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
     return false
   end
 end
@@ -531,9 +529,7 @@ coroutine.wrap(function()
         text = string.gsub(text, "%$register_([%w*+:/\"])", function(r_name)
             local register = vim.fn.getreg(r_name)
             if not register or register:match("^%s*$") then
-                vim.schedule(function()
-                    vim.notify("Prompt uses $register_" .. r_name .. " but register " .. r_name .. " is empty", vim.log.levels.ERROR)
-                end)
+                utils.notify("Prompt uses $register_" .. r_name .. " but register " .. r_name .. " is empty", vim.log.levels.ERROR)
                 register_error = true
                 return ""
             end
@@ -547,9 +543,7 @@ coroutine.wrap(function()
         if string.find(text, "%$register") then
             local register = vim.fn.getreg('"')
             if not register or register:match("^%s*$") then
-                vim.schedule(function()
-                    vim.notify("Prompt uses $register but yank register is empty", vim.log.levels.ERROR)
-                end)
+                utils.notify("Prompt uses $register but yank register is empty", vim.log.levels.ERROR)
                 return nil
             end
             text = string.gsub(text, "%$register", register)
@@ -558,16 +552,12 @@ coroutine.wrap(function()
         if string.find(text, "%$text") then
             -- Check if text_selection_only is enabled and we're not in visual mode
             if opts.text_selection_only and (globals.start_pos == globals.end_pos) then
-                vim.schedule(function()
-                    vim.notify("No visual mode text selection (select $text in visual mode)", vim.log.levels.ERROR)
-                end)
+                utils.notify("No visual mode text selection (select $text in visual mode)", vim.log.levels.ERROR)
                 return nil
             end
 
             if selected_text == "" then
-                vim.schedule(function()
-                    vim.notify("Prompt uses $text but no text is selected", vim.log.levels.ERROR)
-                end)
+                utils.notify("Prompt uses $text but no text is selected", vim.log.levels.ERROR)
                 return nil
             end
 
@@ -648,9 +638,7 @@ coroutine.wrap(function()
             globals.temp_filename = os.tmpname()
             local fhandle, err = io.open(globals.temp_filename, "w")
             if not fhandle then
-                vim.schedule(function()
-                    vim.notify("Error opening '" .. globals.temp_filename .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
-                end)
+                utils.notify("Error opening '" .. globals.temp_filename .. "': " .. (err or "unknown error"), vim.log.levels.ERROR)
                 return nil
             end
             fhandle:write(json)
@@ -676,7 +664,7 @@ M.run_command = function(cmd, opts)
     local partial_data = ""
     if opts.debug then vim.print(cmd) end
 
-    vim.schedule(function() vim.notify("Generating...", vim.log.levels.INFO) end)
+    utils.notify("Generating...", vim.log.levels.INFO)
 
     globals.job_id = vim.fn.jobstart(cmd, {
         -- stderr_buffered = opts.debug,
@@ -881,7 +869,7 @@ function Process_response(str, json_response)
                     })
                     -- Clear the buffer as we're done with this sequence of messages
                     globals.context_buffer = ""
-                    vim.schedule(function() vim.notify("", vim.log.levels.INFO) end) -- Clear "Generating..." message
+                    utils.notify("", vim.log.levels.INFO) -- Clear "Generating..." message
                 end
             elseif result.choices then -- groq chat endpoint
                 local choice = result.choices[1]
