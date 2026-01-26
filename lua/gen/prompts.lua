@@ -2,6 +2,7 @@ local utils = require("gen.utils")
 
 local M = {}
 
+-- TODO: fix duplicate field warnings, almost certainly due to prompts.lua being read via multiple search paths.
 --- @class Prompt
 --- @field prompt string|fun(context: table): string The prompt string or a function returning it.
 --- @field replace boolean|string|nil Whether/how to replace matched content ('true', 'false', 'before', 'after').
@@ -120,8 +121,8 @@ local function parse_markdown_prompts(file_content)
           if key == "replace" and (value == "true" or value == "false") then
             options[key] = value == "true"
           elseif key == "extract" then
-            -- Validate regex by attempting to compile it
-            local success, _ = pcall(string.match, "", value)
+            value = utils.unescape(value) -- Translate escaped characters
+            local success, _ = pcall(string.match, "", value) -- Validate regex by attempting to compile it
             if not success then
               vim.notify("Invalid regex in extract option at line " .. i .. ": " .. value, vim.log.levels.ERROR)
               return nil

@@ -7,6 +7,31 @@ function M.trim(s)
     return s:match("^%s*(.-)%s*$")
 end
 
+--- Unescapes escape sequences in a string
+-- @param s string The string to unescape
+-- @return string The unescaped string
+-- function M.unescape(s)
+--   local f = load("return " .. string.format("%q", s))
+--   return f()
+-- end
+
+--- Unescapes escape sequences in a string
+-- @param str string The string to unescape
+-- @return string The unescaped string
+function M.unescape(str)
+    local map = {
+        ["n"] = "\n",
+        ["r"] = "\r",
+        ["t"] = "\t",
+        ["\\"] = "\\",
+        ['"'] = '"',
+        ["'"] = "'"
+    }
+    return str:gsub("\\(.)", function(char)
+        return map[char] or char
+    end)
+end
+
 --- Remove empty/whitespace-only elements from the beginning and end of a table
 -- This function modifies the table in-place by removing empty strings or 
 -- strings containing only whitespace from the start and end of the table.
