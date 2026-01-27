@@ -212,19 +212,14 @@ end
 
 local prompt_syntax_rules = {
   {
-    group = "MarkdownDirectiveRed",
-    cmd = [[match MarkdownDirectiveRed /\v^(name|model|extract|replace|prompt):/]],
+    group = "GenPromptProperty",
+    cmd = [[match GenPromptProperty /\v^(name|model|extract|replace|prompt):/]],
   },
   {
-    group = "MarkdownVariableGreen",
-    cmd = [[match MarkdownVariableGreen /\v\$(text|input|select|clipboard|yanked|filetype|register_.|register)|\$\{input:.{-}\}/]],
+    group = "GenPromptPlaceholder",
+    cmd = [[match GenPromptPlaceholder /\v\$(text|input|select|clipboard|yanked|filetype|register_.|register)|\$\{input:.{-}\}/]],
   },
 }
-
-vim.cmd([[
-  highlight default MarkdownDirectiveRed  gui=NONE  cterm=NONE  guifg=#ff5f5f ctermfg=Red
-  highlight default MarkdownVariableGreen gui=NONE  cterm=NONE  guifg=#5fff87 ctermfg=Green
-]])
 
 --- Add extra syntax prompt file highlighting rules to a specific buffer
 -- **NOTE**: Markdown Treesitter syntax highlighting takes precedence over custom syntax rules.

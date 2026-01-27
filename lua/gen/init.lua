@@ -2,7 +2,14 @@ local prompts = require("gen.prompts")
 local utils = require("gen.utils")
 local M = {}
 
+vim.cmd([[
+    highlight default GenSpinner  gui=NONE  cterm=NONE  guifg=#a6e3a1 ctermfg=157
+    highlight default GenPromptProperty  gui=NONE  cterm=NONE  guifg=#f38ba8 ctermfg=211
+    highlight default GenPromptPlaceholder gui=NONE  cterm=NONE  guifg=#94e2d5 ctermfg=116
+]])
+
 local globals = {}
+
 local function reset(keep_selection_and_context)
     if not keep_selection_and_context then
         globals.curr_buffer = nil -- Replacement buffer number
@@ -666,7 +673,7 @@ M.run_command = function(cmd, opts)
     local partial_data = ""
     if opts.debug then vim.print(cmd) end
 
-    globals.stop_spinner = utils.notify_with_spinner("Generating...", { interval = 100, hl_group = "String" })
+    globals.stop_spinner = utils.notify_with_spinner("Generating...", { interval = 100, hl_group = "GenSpinner" })
 
     globals.job_id = vim.fn.jobstart(cmd, {
         -- stderr_buffered = opts.debug,
