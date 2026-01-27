@@ -3,14 +3,31 @@ local M = {}
 --- Strip leading and trailing whitespace from a string
 --- @param s string The input string to trim
 --- @return string The trimmed string
-function M.trim(s)
+function M.trim_string(s)
     return s:match("^%s*(.-)%s*$")
 end
 
+--- Escapes special characters in a string
+--- @param s string The string to escape
+--- @return string The escaped string
+function M.escape_string(s)
+    local map = {
+        ['\n'] = '\\n',
+        ['\r'] = '\\r',
+        ['\t'] = '\\t',
+        ['\\'] = '\\\\',
+        ['"'] = '\\"',
+        ["'"] = "\\'"
+    }
+    return s:gsub("[\n\r\t\\\"']", function(char)
+        return map[char] or char
+    end)
+end
+
 --- Unescapes escape sequences in a string
---- @param str string The string to unescape
+--- @param s string The string to unescape
 --- @return string The unescaped string
-function M.unescape(str)
+function M.unescape_string(s)
     local map = {
         ["n"] = "\n",
         ["r"] = "\r",
@@ -19,7 +36,7 @@ function M.unescape(str)
         ['"'] = '"',
         ["'"] = "'"
     }
-    return str:gsub("\\(.)", function(char)
+    return s:gsub("\\(.)", function(char)
         return map[char] or char
     end)
 end

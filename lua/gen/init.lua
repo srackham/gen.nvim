@@ -128,7 +128,9 @@ local function response_header(opts)
     table.insert(header,"___")
     table.insert(header, "_date_: " .. os.date("%Y-%m-%d %H:%M:%S"))
     table.insert(header, "_model_: " .. opts.model)
-
+    if opts.extract then
+        table.insert(header, "_extract_: " .. utils.escape_string(opts.extract))
+    end
     if opts.show_prompt then
         if opts.show_prompt == true then opts.show_prompt = 3 end -- Default truncation size
         table.insert(header,"_prompt_:")

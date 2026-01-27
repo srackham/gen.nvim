@@ -121,7 +121,7 @@ local function parse_markdown_prompts(file_content)
           if key == "replace" and (value == "true" or value == "false") then
             options[key] = value == "true"
           elseif key == "extract" then
-            value = utils.unescape(value) -- Translate escaped characters
+            value = utils.unescape_string(value) -- Translate escaped characters
             local success, _ = pcall(string.match, "", value) -- Validate regex by attempting to compile it
             if not success then
               vim.notify("Invalid regex in extract option at line " .. i .. ": " .. value, vim.log.levels.ERROR)
@@ -275,7 +275,7 @@ function M.prompt_picker(callback, gen_opts)
                 if type(prompt_data.prompt) == "function" then
                     content = content .. "Prompt function (cannot display)"
                 else
-                    content = content .. utils.trim(prompt_data.prompt)
+                    content = content .. utils.trim_string(prompt_data.prompt)
                 end
                 vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(content, "\n"))
                 -- vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })
