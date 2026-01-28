@@ -75,6 +75,7 @@ local default_options = {
     custom_prompts_only = false,
     prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/prompts",
     response_register = nil,
+    prompt_register = 'p', -- The most recent submitted prompt
     text_selection_only = false,
     logs_dir = vim.fn.stdpath "data" .. "/gen_nvim/logs",
     log_file = function (opts)
@@ -657,6 +658,11 @@ coroutine.wrap(function()
             local json = opts.json(body, true)
             cmd = string.gsub(cmd, "%$body", json)
         end
+    end
+
+    -- Copy prompt string to register if primpt_register is set
+    if opts.prompt_register ~= nil then
+        vim.fn.setreg(opts.prompt_register, opts.prompt)
     end
 
     M.run_command(cmd, opts)
