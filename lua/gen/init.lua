@@ -10,6 +10,17 @@ vim.cmd([[
 
 local globals = {}
 
+local function jobstop(msg)
+    if globals.job_id then
+        vim.fn.jobstop(globals.job_id)
+        globals.job_id = nil
+    end
+    if globals.stop_spinner then
+        globals.stop_spinner(msg)
+        globals.stop_spinner = nil
+    end
+end
+
 local function reset(keep_selection_and_context)
     if not keep_selection_and_context then
         globals.curr_buffer = nil -- Replacement buffer number
@@ -19,7 +30,7 @@ local function reset(keep_selection_and_context)
         globals.response_lines = {}
     end
     if globals.job_id then
-        vim.fn.jobstop(globals.job_id)
+        jobstop()
         globals.job_id = nil
     end
     if globals.result_buffer ~= nil then
@@ -372,8 +383,8 @@ local function create_window(cmd, opts)
         vim.cmd("edit gen.nvim")
         setup_window()
     end
-    vim.keymap.set("n", "<esc>", function()
-        if globals.job_id then vim.fn.jobstop(globals.job_id) end
+    vim.keymap.set("n", "<Esc>", function()
+        jobstop("User aborted!")
     end, {buffer = globals.result_buffer})
     vim.keymap.set("n", M.quit_map, "<cmd>quit<cr>",
                    {buffer = globals.result_buffer})
@@ -383,10 +394,7 @@ local function create_window(cmd, opts)
     end, {buffer = globals.result_buffer})
     vim.keymap.set("n", M.retry_map, function()
         local buf = 0 -- Current buffer i.e. response buffer
-        if globals.job_id then
-            vim.fn.jobstop(globals.job_id)
-            globals.job_id = nil
-        end
+        jobstop()
           vim.api.nvim_set_option_value("modifiable", true, {buf = buf})
           vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "", })
           vim.api.nvim_set_option_value("modifiable", false, {buf = buf})
@@ -687,9 +695,7 @@ M.run_command = function(cmd, opts)
             -- window was closed, so cancel the job
             if not globals.float_win or
                 not vim.api.nvim_win_is_valid(globals.float_win) then
-                if globals.job_id then
-                    vim.fn.jobstop(globals.job_id)
-                end
+                jobstop("Aborted (window closed)!")
                 if globals.result_buffer then
                     vim.api.nvim_buf_delete(globals.result_buffer,
                                             {force = true})
@@ -721,11 +727,8 @@ M.run_command = function(cmd, opts)
         on_stderr = function(_, data, _)
             if opts.debug then
                 -- window was closed, so cancel the job
-                if not globals.float_win or
-                    not vim.api.nvim_win_is_valid(globals.float_win) then
-                    if globals.job_id then
-                        vim.fn.jobstop(globals.job_id)
-                    end
+                if not globals.float_win or not vim.api.nvim_win_is_valid(globals.float_win) then
+                    jobstop("Aborted (window closed)!")
                     return
                 end
 
@@ -752,7 +755,7 @@ M.run_command = function(cmd, opts)
         buffer = globals.result_buffer,
         group = augroup,
         callback = function()
-            if globals.job_id then vim.fn.jobstop(globals.job_id) end
+            jobstop("Aborted (window closed)!")
             if globals.result_buffer then
                 vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
             end
@@ -884,7 +887,7 @@ function Process_response(str, json_response)
                     })
                     -- Clear the buffer as we're done with this sequence of messages
                     globals.context_buffer = ""
-                    globals.stop_spinner()
+                    jobstop()
                 end
             elseif result.choices then -- groq chat endpoint
                 local choice = result.choices[1]
@@ -919,7 +922,7 @@ function Process_response(str, json_response)
             end
         else
             write_to_buffer({"", "====== ERROR ====", str, "-------------", ""})
-            vim.fn.jobstop(globals.job_id)
+            jobstop("Aborted (JSON response parse error)!")
         end
     else
         text = str
