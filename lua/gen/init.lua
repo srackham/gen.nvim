@@ -121,7 +121,7 @@ local function append_file(path, text)
 end
 
 -- Static autocommand group for general plugin-wide autocmds
--- This group will be cleared once when the plugin is loaded
+-- This group will be cleared once when the plugin is loaded (see the "GenTransient" group).
 vim.api.nvim_create_augroup("GenStatic", { clear = true })
 
 -- Reload prompts when a prompts file is saved
@@ -130,7 +130,7 @@ vim.api.nvim_create_autocmd("BufWritePost", {
   pattern = M.prompts_dir .. "/*.prompts.md",
   callback = function()
     M.prompts = prompts.get_prompts(M)
-    -- vim.notify("Gen.nvim prompts reloaded.", vim.log.levels.INFO)
+    vim.notify("Gen.nvim prompts reloaded.", vim.log.levels.INFO)
   end,
 })
 
@@ -297,7 +297,6 @@ local function get_window_options(win_config)
       border = win_config.border,
       title = ' Responses ',
       title_pos = 'center',
-
     }
 
     return result

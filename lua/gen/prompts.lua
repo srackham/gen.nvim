@@ -522,6 +522,25 @@ function M.open_scratchpad(path, opts)
   opts.title_pos = 'center'
   utils.create_window(path, opts)
 
+  -- Scratchpad window key map commands
+  local bufnr = vim.api.nvim_get_current_buf()
+  vim.keymap.set("n", "q", "<Cmd>close<CR>", {
+    buffer = bufnr,
+    silent = true,
+    nowait = true,
+    desc = "Save and close Scratchpad",
+  })
+
+  vim.keymap.set("n", "s", function ()
+      vim.cmd.update()
+      vim.schedule(function() vim.cmd('Gen .') end)
+    end, {
+    buffer = bufnr,
+    silent = true,
+    nowait = true,
+    desc = "Submit Scratchpad prompt",
+  })
+
 end
 
 return M
