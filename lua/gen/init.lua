@@ -355,6 +355,7 @@ local function create_window(cmd, opts)
     end
 
     local display_mode = opts.display_mode or M.display_mode
+    local WIN_NAME = "gen.nvim"
     if display_mode == "float" then
         if globals.result_buffer then
             vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
@@ -362,27 +363,21 @@ local function create_window(cmd, opts)
         globals.result_buffer = vim.api.nvim_create_buf(false, true)
         local win_config = get_window_options(opts.response_window_layout)
         globals.float_win = vim.api.nvim_open_win(globals.result_buffer, true, win_config)
-        setup_window()
     elseif display_mode == "horizontal-split" then
-        vim.cmd("split gen.nvim")
-        setup_window()
+        vim.cmd("split " .. WIN_NAME)
     elseif display_mode == "vertical-split" then
-        vim.cmd("vnew gen.nvim")
-        setup_window()
+        vim.cmd("vnew " .. WIN_NAME)
     elseif display_mode == "horizontal-split-bottom" then
-        vim.cmd("botright split gen.nvim")
-        setup_window()
+        vim.cmd("botright split " .. WIN_NAME)
     elseif display_mode == "vertical-split-right" then
-        vim.cmd("botright vnew gen.nvim")
-        setup_window()
+        vim.cmd("botright vnew " .. WIN_NAME)
     elseif display_mode == "no-split" then
-        vim.cmd("edit gen.nvim")
-        setup_window()
+        vim.cmd("edit " .. WIN_NAME)
     else
         vim.notify("Gen.nvim warning : Invalid display mode specified.", vim.log.levels.WARN)
-        vim.cmd("edit gen.nvim")
-        setup_window()
+        vim.cmd("edit " .. WIN_NAME)
     end
+    setup_window()
     vim.keymap.set("n", "<Esc>", function()
         jobstop("User aborted!", { hl_group = "WarningMsg" })
     end, {buffer = globals.result_buffer})
