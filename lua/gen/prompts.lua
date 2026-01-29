@@ -66,7 +66,7 @@ local builtin_prompts = {
 -- @param file_content string The full content of the markdown prompt file as a string.
 -- @return table|nil Returns a table mapping prompt names to their config+prompt text,
 --                  or nil if parsing fails due to formatting errors.
-local function parse_markdown_prompts(file_content)
+local function parse_prompts(file_content)
   local result = {}
   local lines = vim.split(file_content, "\n")
   local i = 1
@@ -173,13 +173,38 @@ local function parse_markdown_prompts(file_content)
   return result
 end
 
+local function parse_scratchpad(file_content)
+    if utils.trim_string(file_content) == "" then
+        return {}
+    end
+
+    local first_line = string.match(file_content, "^[^\n]*")
+    local with_header
+
+    if first_line ~= "___" and first_line ~= "---" then
+        local header = "___\nname: .\n___\n"
+        with_header = header .. file_content
+    else
+        with_header = file_content
+    end
+
+    local result = parse_prompts(with_header)
+
+    if result == nil or utils.table_size(result) ~= 1 or result["."] == nil then
+        utils.notify("Invalid scratchpad prompt:\n" .. file_content, vim.log.levels.ERROR)
+        return nil
+    end
+
+    return result
+end
+
 --- Get prompts from builtin sources and custom markdown files
 -- This function collects prompts from both builtin sources and custom
 -- markdown files located in the specified prompts directory.
 -- Custom prompts will override builtin prompts when they have the same key.
 -- @param opts table: Configuration options containing:
---   - custom_prompts_only (boolean, optional): If true, only custom prompts are returned
---   - prompts_dir (string): Directory path where custom .prompts.md files are located
+--   - `custom_prompts_only` (boolean, optional): If true, only custom prompts are returned
+--   - `prompts_dir` (string): Directory path where custom .prompts.md files are located
 -- @return table<string, Prompt> A dictionary of prompts where keys are prompt names and values are prompt content
 function M.get_prompts(opts)
   local result = {}
@@ -195,7 +220,15 @@ function M.get_prompts(opts)
     if vim.fn.filereadable(file_path) == 1 then
       local file_content = vim.fn.readfile(file_path)
       if file_content then
-        local prompts = parse_markdown_prompts(table.concat(file_content, "\n"))
+        file_content = table.concat(file_content, "\n")
+        -- If scratchpad file then header it contains a single prompt named "." and the header is optional
+        local filename = vim.fn.fnamemodify(file_path, ":t")
+        local prompts
+        if filename == "Scratchpad.prompts.md" then
+            prompts = parse_scratchpad(file_content)
+        else
+            prompts = parse_prompts(file_content)
+        end
         if prompts then
           for key, value in pairs(prompts) do
             value.source_file = file_path
@@ -490,8 +523,8 @@ function M.manage_prompts_files(gen_opts)
   end)
 end
 
-function M.open_scratchpad(path, opts)
-  opts = opts or {}
+function M.open_scratchpad(path, layout, opts)
+  layout = layout or {}
 
   -- Check if the file exists. vim.fn.filereadable returns 1 if readable, 0 otherwise.
   local file_exists = vim.fn.filereadable(path) == 1
@@ -518,12 +551,13 @@ function M.open_scratchpad(path, opts)
     end
   end
 
-  opts.title = ' Scratchpad '
-  opts.title_pos = 'center'
-  utils.create_window(path, opts)
+  layout.title = ' Scratchpad '
+  layout.title_pos = 'center'
+  utils.create_window(path, layout)
 
   -- Scratchpad window key map commands
   local bufnr = vim.api.nvim_get_current_buf()
+
   vim.keymap.set("n", "q", "<Cmd>close<CR>", {
     buffer = bufnr,
     silent = true,
@@ -531,7 +565,7 @@ function M.open_scratchpad(path, opts)
     desc = "Save and close Scratchpad",
   })
 
-  vim.keymap.set("n", "s", function ()
+  vim.keymap.set({"n","v"}, "<C-s>", function ()
       vim.cmd.update()
       vim.schedule(function() vim.cmd('Gen .') end)
     end, {
@@ -539,6 +573,13 @@ function M.open_scratchpad(path, opts)
     silent = true,
     nowait = true,
     desc = "Submit Scratchpad prompt",
+  })
+
+  vim.keymap.set({"n","v"}, "<C-p>", "<Cmd>%d | 0put " .. opts.prompt_register .. "<CR>", {
+    buffer = bufnr,
+    silent = true,
+    nowait = true,
+    desc = "Copy the most recently executed prompt to the Scratchpad",
   })
 
 end

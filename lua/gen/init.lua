@@ -85,8 +85,8 @@ local default_options = {
     result_filetype = "markdown",
     custom_prompts_only = false,
     prompts_dir = vim.fn.stdpath "data" .. "/gen_nvim/prompts",
-    response_register = nil,
-    prompt_register = 'p', -- The most recent submitted prompt
+    response_register = nil, -- Holds the most recent response
+    prompt_register = 'p', -- Holds the most recent submitted prompt (mandatory, cannot be nil)
     text_selection_only = false,
     logs_dir = vim.fn.stdpath "data" .. "/gen_nvim/logs",
     log_file = function (opts)
@@ -816,7 +816,7 @@ vim.api.nvim_create_user_command("Gen", function(arg)
             return
         elseif arg.args == "/scratchpad" then
             local scratchpad_filename = M.prompts_dir .. "/Scratchpad.prompts.md"
-            prompts.open_scratchpad(scratchpad_filename, M.scratchpad_layout)
+            prompts.open_scratchpad(scratchpad_filename, M.scratchpad_layout, M)
             return
         else
             local prompt = M.prompts[arg.args]

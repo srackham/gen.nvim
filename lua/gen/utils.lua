@@ -41,6 +41,14 @@ function M.unescape_string(s)
     end)
 end
 
+function M.table_size(tbl)
+    local count = 0
+    for _ in pairs(tbl) do
+      count = count + 1
+    end
+    return count
+end
+
 --- Scheduled `vim.notify`.
 function M.notify(...)
     vim.schedule_wrap(vim.notify)(...)
@@ -182,10 +190,10 @@ end
 --- Opens a floating window with the specified file
 ---@param path string The file path to open in the float
 ---@param opts table|nil Optional configuration parameters
----  "width" number Width of the float as a percentage of editor width (default: 0.8)
----  "height" number Height of the float as a percentage of editor height (default: 0.8)
----  "border" string Border style ("single", "double", "rounded", etc.) (default: "single")
----  "style" string Window style (default: "minimal")
+---  - `width` number Width of the float as a percentage of editor width (default: 0.8)
+---  - `height` number Height of the float as a percentage of editor height (default: 0.8)
+---  - `border` string Border style ("single", "double", "rounded", etc.) (default: "single")
+---  - `style` string Window style (default: "minimal")
 function M.open_float(path, opts)
   -- Set default options
   opts = vim.tbl_deep_extend("force", {
@@ -223,13 +231,13 @@ end
 --- Creates a window to display a file based on the specified display mode
 ---@param path string The file path to open
 ---@param opts table Configuration options containing display_mode and other settings
----  "display_mode" string How to display the file:
----      "float" - opens in a floating window
----      "no-split" or nil - opens in current window
----      "horizontal-split" - splits horizontally
----      "vertical-split" - splits vertically
----      "horizontal-split-bottom" - splits horizontally at bottom
----      "vertical-split-right" - splits vertically at right
+---  - `display_mode` string How to display the file:
+---      - `float` - opens in a floating window
+---      - `no-split` or nil - opens in current window
+---      - `horizontal-split` - splits horizontally
+---      - `vertical-split` - splits vertically
+---      - `horizontal-split-bottom` - splits horizontally at bottom
+---      - `vertical-split-right` - splits vertically at right
 ---  Any Other options are passed to the underlying window creation function
 function M.create_window(path, opts)
     local display_mode = opts.display_mode
