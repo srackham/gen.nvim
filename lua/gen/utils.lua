@@ -230,7 +230,6 @@ end
 ---      "vertical-split-right" - splits vertically at right
 ---  Any Other options are passed to the underlying window creation function
 function M.create_window(path, opts)
-    -- Open the file for editing.
     local display_mode = opts.display_mode
     if display_mode == "float" then
         M.open_float(path, opts)
