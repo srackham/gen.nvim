@@ -816,6 +816,10 @@ vim.api.nvim_create_user_command("Gen", function(arg)
         elseif arg.args == "/models" then
             M.select_model()
             return
+        elseif arg.args == "/scratchpad" then
+            local scratchpad_filename = M.prompts_dir .. "/Scratchpad.prompts.md"
+            prompts.open_scratchpad(scratchpad_filename)
+            return
         else
             local prompt = M.prompts[arg.args]
             if not prompt then
@@ -845,6 +849,7 @@ end, {
         table.insert(gen_args, "/responses")
         table.insert(gen_args, "/prompts")
         table.insert(gen_args, "/models")
+        table.insert(gen_args, "/scratchpad")
 
         for _, arg in pairs(gen_args) do
             if arg:lower():match("^" .. ArgLead:lower()) then

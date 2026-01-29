@@ -490,4 +490,34 @@ function M.manage_prompts_files(gen_opts)
   end)
 end
 
+function M.open_scratchpad(path)
+  -- Check if the file exists. vim.fn.filereadable returns 1 if readable, 0 otherwise.
+  local file_exists = vim.fn.filereadable(path) == 1
+
+  if not file_exists then
+    -- Extract the directory path from the full path.
+    local dir_path = vim.fn.fnamemodify(path, ':h')
+
+    -- Create parent directories recursively if they don't exist.
+    -- vim.fn.isdirectory returns 1 if a directory, 0 otherwise.
+    if dir_path ~= "" and vim.fn.isdirectory(dir_path) == 0 then
+      -- The 'p' flag ensures parent directories are created if missing.
+      vim.fn.mkdir(dir_path, 'p')
+    end
+
+    -- Create file
+    local file = io.open(path, "w")
+    if file then
+      file:write("")
+      file:close()
+    else
+      vim.notify("Failed to create scratchpad file '" .. path .. "'", vim.log.levels.ERROR)
+      return
+    end
+  end
+
+  -- Open the file for editing.
+  vim.cmd("edit " .. vim.fn.fnameescape(path))
+end
+
 return M
