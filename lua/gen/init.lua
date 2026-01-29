@@ -294,7 +294,10 @@ local function get_window_options(win_config)
       col = float_col,
       relative = 'editor', -- Relative to the main editor area
       style = "minimal",
-      border = win_config.border
+      border = win_config.border,
+      title = ' Responses ',
+      title_pos = 'center',
+
     }
 
     return result

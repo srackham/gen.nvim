@@ -211,6 +211,8 @@ function M.open_float(path, opts)
     height = height,
     col = col,
     row = row,
+    title = opts.title,
+    title_pos = opts.title_pos,
   })
 
   vim.api.nvim_win_call(win, function()

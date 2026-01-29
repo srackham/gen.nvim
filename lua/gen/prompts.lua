@@ -518,6 +518,8 @@ function M.open_scratchpad(path, opts)
     end
   end
 
+  opts.title = ' Scratchpad '
+  opts.title_pos = 'center'
   utils.create_window(path, opts)
 
 end
