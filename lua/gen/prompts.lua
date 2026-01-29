@@ -490,7 +490,9 @@ function M.manage_prompts_files(gen_opts)
   end)
 end
 
-function M.open_scratchpad(path)
+function M.open_scratchpad(path, opts)
+  opts = opts or {}
+
   -- Check if the file exists. vim.fn.filereadable returns 1 if readable, 0 otherwise.
   local file_exists = vim.fn.filereadable(path) == 1
 
@@ -516,8 +518,8 @@ function M.open_scratchpad(path)
     end
   end
 
-  -- Open the file for editing.
-  vim.cmd("edit " .. vim.fn.fnameescape(path))
+  utils.create_window(path, opts)
+
 end
 
 return M

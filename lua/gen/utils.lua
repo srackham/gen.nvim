@@ -112,7 +112,7 @@ function M.notify_with_spinner(message, opts)
     -- 3. Return a "stop" function to kill the loop
     return function(done_message, done_opts)
         kill = true
-        M.message(done_message or "Done!", vim.tbl_deep_extend("force", opts, done_opts))
+        M.message(done_message or "Done!", vim.tbl_deep_extend("force", opts, done_opts or {}))
     end
 end
 
@@ -177,6 +177,76 @@ function M.ui_select_sync(items, opts)
   end)
 
   return coroutine.yield()
+end
+
+--- Opens a floating window with the specified file
+---@param path string The file path to open in the float
+---@param opts table|nil Optional configuration parameters
+---  "width" number Width of the float as a percentage of editor width (default: 0.8)
+---  "height" number Height of the float as a percentage of editor height (default: 0.8)
+---  "border" string Border style ("single", "double", "rounded", etc.) (default: "single")
+---  "style" string Window style (default: "minimal")
+function M.open_float(path, opts)
+  -- Set default options
+  opts = vim.tbl_deep_extend("force", {
+      width = 0.8,
+      height = 0.8,
+      border = "single",
+      style = "minimal",
+  }, opts or {})
+
+  local buf = vim.api.nvim_create_buf(false, true)
+
+  local ui = vim.api.nvim_list_uis()[1]
+  local width = math.floor(ui.width * opts.width)
+  local height = math.floor(ui.height * opts.height)
+  local col = math.floor((ui.width - width) / 2)
+  local row = math.floor((ui.height - height) / 2)
+
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    style = opts.style,
+    border = opts.border,
+    width = width,
+    height = height,
+    col = col,
+    row = row,
+  })
+
+  vim.api.nvim_win_call(win, function()
+    vim.cmd.edit(path)
+  end)
+end
+
+--- Creates a window to display a file based on the specified display mode
+---@param path string The file path to open
+---@param opts table Configuration options containing display_mode and other settings
+---  "display_mode" string How to display the file:
+---      "float" - opens in a floating window
+---      "no-split" or nil - opens in current window
+---      "horizontal-split" - splits horizontally
+---      "vertical-split" - splits vertically
+---      "horizontal-split-bottom" - splits horizontally at bottom
+---      "vertical-split-right" - splits vertically at right
+---  Any Other options are passed to the underlying window creation function
+function M.create_window(path, opts)
+    -- Open the file for editing.
+    local display_mode = opts.display_mode
+    if display_mode == "float" then
+        M.open_float(path, opts)
+    elseif display_mode == nil or display_mode == "no-split" then
+      vim.cmd("edit " .. vim.fn.fnameescape(path))
+    elseif display_mode == "horizontal-split" then
+        vim.cmd("split " .. vim.fn.fnameescape(path))
+    elseif display_mode == "vertical-split" then
+        vim.cmd("vsplit " .. vim.fn.fnameescape(path))
+    elseif display_mode == "horizontal-split-bottom" then
+        vim.cmd("botright split " .. vim.fn.fnameescape(path))
+    elseif display_mode == "vertical-split-right" then
+        vim.cmd("botright vsplit " .. vim.fn.fnameescape(path))
+    else
+        vim.notify("Gen.nvim: Invalid display mode '" .. display_mode .. "'", vim.log.levels.WARN)
+    end
 end
 
 return M
