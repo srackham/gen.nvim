@@ -10,13 +10,13 @@ vim.cmd([[
 
 local globals = {}
 
-local function jobstop(msg)
+local function jobstop(msg, opts)
     if globals.job_id then
         vim.fn.jobstop(globals.job_id)
         globals.job_id = nil
     end
     if globals.stop_spinner then
-        globals.stop_spinner(msg)
+        globals.stop_spinner(msg, opts)
         globals.stop_spinner = nil
     end
 end
@@ -384,7 +384,7 @@ local function create_window(cmd, opts)
         setup_window()
     end
     vim.keymap.set("n", "<Esc>", function()
-        jobstop("User aborted!")
+        jobstop("User aborted!", { hl_group = "WarningMsg" })
     end, {buffer = globals.result_buffer})
     vim.keymap.set("n", M.quit_map, "<cmd>quit<cr>",
                    {buffer = globals.result_buffer})
@@ -695,7 +695,7 @@ M.run_command = function(cmd, opts)
             -- window was closed, so cancel the job
             if not globals.float_win or
                 not vim.api.nvim_win_is_valid(globals.float_win) then
-                jobstop("Aborted (window closed)!")
+                jobstop("Aborted (window closed)!", { hl_group = "WarningMsg" })
                 if globals.result_buffer then
                     vim.api.nvim_buf_delete(globals.result_buffer,
                                             {force = true})
@@ -728,7 +728,7 @@ M.run_command = function(cmd, opts)
             if opts.debug then
                 -- window was closed, so cancel the job
                 if not globals.float_win or not vim.api.nvim_win_is_valid(globals.float_win) then
-                    jobstop("Aborted (window closed)!")
+                    jobstop("Aborted (window closed)!", { hl_group = "WarningMsg" })
                     return
                 end
 
@@ -755,7 +755,7 @@ M.run_command = function(cmd, opts)
         buffer = globals.result_buffer,
         group = augroup,
         callback = function()
-            jobstop("Aborted (window closed)!")
+            jobstop("Aborted (window closed)!", { hl_group = "WarningMsg" })
             if globals.result_buffer then
                 vim.api.nvim_buf_delete(globals.result_buffer, {force = true})
             end
@@ -922,7 +922,7 @@ function Process_response(str, json_response)
             end
         else
             write_to_buffer({"", "====== ERROR ====", str, "-------------", ""})
-            jobstop("Aborted (JSON response parse error)!")
+            jobstop("Aborted (JSON response parse error)!", { hl_group = "Error" })
         end
     else
         text = str

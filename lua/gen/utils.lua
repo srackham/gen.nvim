@@ -110,9 +110,9 @@ function M.notify_with_spinner(message, opts)
     run_animation()
 
     -- 3. Return a "stop" function to kill the loop
-    return function(done_message)
+    return function(done_message, done_opts)
         kill = true
-        M.message(done_message or "Done!", opts)
+        M.message(done_message or "Done!", vim.tbl_deep_extend("force", opts, done_opts))
     end
 end
 
