@@ -99,6 +99,7 @@ local default_options = {
     log_rollover = nil, -- nil (default) or "daily"
     response_window_layout = { width = 0.8, height = 0.5, border = "single", }, -- Floating response window layout
     prompt_picker_layout = { width = 0.8, height = 0.5, },
+    scratchpad_filename = function() return M.prompts_dir .. "/Scratchpad.prompts.md" end,
     scratchpad_layout = {},
 }
 for k, v in pairs(default_options) do M[k] = v end
@@ -810,8 +811,7 @@ vim.api.nvim_create_user_command("Gen", function(arg)
             M.select_model()
             return
         elseif arg.args == "/scratchpad" then
-            local scratchpad_filename = M.prompts_dir .. "/Scratchpad.prompts.md"
-            prompts.open_scratchpad(scratchpad_filename, M.scratchpad_layout, M)
+            prompts.open_scratchpad(M)
             return
         else
             local prompt = M.prompts[arg.args]

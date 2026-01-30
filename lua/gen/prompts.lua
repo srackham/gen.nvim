@@ -206,13 +206,13 @@ end
 --   - `custom_prompts_only` (boolean, optional): If true, only custom prompts are returned
 --   - `prompts_dir` (string): Directory path where custom .prompts.md files are located
 -- @return table<string, Prompt> A dictionary of prompts where keys are prompt names and values are prompt content
-function M.get_prompts(opts)
+function M.get_prompts(gen_opts)
   local result = {}
-  if not opts.custom_prompts_only then
+  if not gen_opts.custom_prompts_only then
     result = builtin_prompts
   end
   -- Read and merge prompts from all .prompts.md files
-  local prompts_dir = opts.prompts_dir
+  local prompts_dir = gen_opts.prompts_dir
   local glob_pattern = prompts_dir .. "/*.prompts.md"
   local prompt_files = vim.fn.glob(glob_pattern, false, true)
 
@@ -222,9 +222,8 @@ function M.get_prompts(opts)
       if file_content then
         file_content = table.concat(file_content, "\n")
         -- If scratchpad file then header it contains a single prompt named "." and the header is optional
-        local filename = vim.fn.fnamemodify(file_path, ":t")
         local prompts
-        if filename == "Scratchpad.prompts.md" then
+        if file_path == gen_opts.scratchpad_filename() then
             prompts = parse_scratchpad(file_content)
         else
             prompts = parse_prompts(file_content)
@@ -350,6 +349,20 @@ function M.prompt_picker(callback, gen_opts)
                 end
               end
             end, { buffer = prompt_bufnr, desc = "Edit prompt source file" })
+
+            vim.keymap.set("n", "p", function()
+              local selection = action_state.get_selected_entry()
+              if selection then
+                local prompt_key = selection.value
+                --- @type Prompt
+                local prompt = gen_opts.prompts[prompt_key]
+                assert(prompt)
+                -- vim.print(prompt)
+                local text = M.prompt_to_string(prompt_key, prompt)
+                utils.write_string_to_file(gen_opts.scratchpad_file(), text)
+                actions.close(prompt_bufnr)
+              end
+            end, { buffer = prompt_bufnr, desc = "Copy and paste prompt into Scratchpad" })
 
             return true
         end,
@@ -523,32 +536,15 @@ function M.manage_prompts_files(gen_opts)
   end)
 end
 
-function M.open_scratchpad(path, layout, opts)
-  layout = layout or {}
+function M.open_scratchpad(gen_opts)
+  local layout = gen_opts.scratchpad_layout
+  local path = gen_opts.scratchpad_filename()
 
   -- Check if the file exists. vim.fn.filereadable returns 1 if readable, 0 otherwise.
   local file_exists = vim.fn.filereadable(path) == 1
 
-  if not file_exists then
-    -- Extract the directory path from the full path.
-    local dir_path = vim.fn.fnamemodify(path, ':h')
-
-    -- Create parent directories recursively if they don't exist.
-    -- vim.fn.isdirectory returns 1 if a directory, 0 otherwise.
-    if dir_path ~= "" and vim.fn.isdirectory(dir_path) == 0 then
-      -- The 'p' flag ensures parent directories are created if missing.
-      vim.fn.mkdir(dir_path, 'p')
-    end
-
-    -- Create file
-    local file = io.open(path, "w")
-    if file then
-      file:write("")
-      file:close()
-    else
-      vim.notify("Failed to create scratchpad file '" .. path .. "'", vim.log.levels.ERROR)
+  if not file_exists and not utils.write_string_to_file(path, "") then
       return
-    end
   end
 
   layout.title = ' Scratchpad '
@@ -575,7 +571,7 @@ function M.open_scratchpad(path, layout, opts)
     desc = "Submit Scratchpad prompt",
   })
 
-  vim.keymap.set("n", "<C-p>", "<Cmd>%d | 0put " .. opts.prompt_register .. "<CR>", {
+  vim.keymap.set("n", "<C-p>", "<Cmd>%d | 0put " .. gen_opts.prompt_register .. "<CR>", {
     buffer = bufnr,
     silent = true,
     nowait = true,

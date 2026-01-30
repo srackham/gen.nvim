@@ -54,6 +54,19 @@ function M.notify(...)
     vim.schedule_wrap(vim.notify)(...)
 end
 
+function M.write_string_to_file(fname, str)
+    vim.fn.mkdir(vim.fn.fnamemodify(fname, ":h"), "p") -- Ensure directory exists
+    local f = io.open(fname, "w")
+    if f then
+        f:write(str)
+        f:close()
+       return true
+    else
+        M.notify("Could not write to file: '" .. fname .."'", vim.log.levels.ERROR)
+        return false
+    end
+end
+
 --- Display a message using vim's echo interface
 --- Shows a message in the command line area with optional highlighting.
 --- This function wraps vim.api.nvim_echo with simplified parameter handling.
