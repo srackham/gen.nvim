@@ -565,7 +565,7 @@ function M.open_scratchpad(path, layout, opts)
     desc = "Save and close Scratchpad",
   })
 
-  vim.keymap.set({"n","v"}, "<C-s>", function ()
+  vim.keymap.set("n", "<C-s>", function ()
       vim.cmd.update()
       vim.schedule(function() vim.cmd('Gen .') end)
     end, {
@@ -575,7 +575,7 @@ function M.open_scratchpad(path, layout, opts)
     desc = "Submit Scratchpad prompt",
   })
 
-  vim.keymap.set({"n","v"}, "<C-p>", "<Cmd>%d | 0put " .. opts.prompt_register .. "<CR>", {
+  vim.keymap.set("n", "<C-p>", "<Cmd>%d | 0put " .. opts.prompt_register .. "<CR>", {
     buffer = bufnr,
     silent = true,
     nowait = true,
