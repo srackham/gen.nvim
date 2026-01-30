@@ -801,14 +801,9 @@ vim.api.nvim_create_user_command("Gen", function(arg)
             reset()
             return
         elseif arg.args == "/responses" then
-            if globals.float_win ~= nil and vim.api.nvim_win_is_valid(globals.float_win) then
-                close_response_window()
-                return
-            else
-                create_window(globals.server_cmd, M)
-                return
-            end
-        elseif arg.args == "/prompts" then
+            create_window(globals.server_cmd, M)
+            return
+        elseif arg.args == "/prompts-files" then
             prompts.manage_prompts_files(M)
             return
         elseif arg.args == "/models" then
@@ -845,7 +840,7 @@ end, {
         end
         table.insert(gen_args, "/reset")
         table.insert(gen_args, "/responses")
-        table.insert(gen_args, "/prompts")
+        table.insert(gen_args, "/prompts-files")
         table.insert(gen_args, "/models")
         table.insert(gen_args, "/scratchpad")
 
