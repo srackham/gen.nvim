@@ -188,14 +188,35 @@ local function parse_scratchpad(file_content)
         with_header = file_content
     end
 
-    local result = parse_prompts(with_header)
+    local prompt = parse_prompts(with_header)
 
-    if result == nil or utils.table_size(result) ~= 1 or result["."] == nil then
+    if prompt == nil or utils.table_size(prompt) ~= 1 or prompt["."] == nil then
         utils.notify("Invalid scratchpad prompt:\n" .. file_content, vim.log.levels.ERROR)
         return nil
     end
 
-    return result
+    return prompt
+end
+
+-- Parse prompt to scratchpad string
+function M.prompt_to_scratchpad_string(prompt)
+    local str = ""
+    if prompt.model or prompt.extract or prompt.replace then
+        str = str .. "___\n"
+        str = str .. "name: .\n"
+        if prompt.model then
+            str = str .. "model: " .. prompt.model .. "\n"
+        end
+        if prompt.extract then
+            str = str .. "extract: " .. utils.escape_string(prompt.extract) .. "\n"
+        end
+        if prompt.replace then
+            str = str .. "replace: " .. prompt.replace .. "\n"
+        end
+        str = str .. "___\n"
+    end
+    str = str .. prompt.prompt .. "\n"
+    return str
 end
 
 --- Get prompts from builtin sources and custom markdown files
@@ -335,6 +356,7 @@ function M.prompt_picker(callback, gen_opts)
                 end
             end)
 
+            -- Edit prompts file containing the selected prompt
             vim.keymap.set("n", "e", function()
               local selection = action_state.get_selected_entry()
               if selection then
@@ -350,6 +372,7 @@ function M.prompt_picker(callback, gen_opts)
               end
             end, { buffer = prompt_bufnr, desc = "Edit prompt source file" })
 
+            -- Write selected prompt to scratchpad file and open scratchpad
             vim.keymap.set("n", "p", function()
               local selection = action_state.get_selected_entry()
               if selection then
@@ -358,8 +381,9 @@ function M.prompt_picker(callback, gen_opts)
                 local prompt = gen_opts.prompts[prompt_key]
                 assert(prompt)
                 -- vim.print(prompt)
-                local text = M.prompt_to_string(prompt_key, prompt)
-                utils.write_string_to_file(gen_opts.scratchpad_file(), text)
+                local text = M.prompt_to_scratchpad_string(prompt)
+                utils.write_string_to_file(text, gen_opts.scratchpad_filename())
+                vim.schedule(function() vim.cmd('Gen /scratchpad') end)
                 actions.close(prompt_bufnr)
               end
             end, { buffer = prompt_bufnr, desc = "Copy and paste prompt into Scratchpad" })
@@ -543,7 +567,7 @@ function M.open_scratchpad(gen_opts)
   -- Check if the file exists. vim.fn.filereadable returns 1 if readable, 0 otherwise.
   local file_exists = vim.fn.filereadable(path) == 1
 
-  if not file_exists and not utils.write_string_to_file(path, "") then
+  if not file_exists and not utils.write_string_to_file("", path) then
       return
   end
 

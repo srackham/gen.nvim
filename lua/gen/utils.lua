@@ -54,7 +54,7 @@ function M.notify(...)
     vim.schedule_wrap(vim.notify)(...)
 end
 
-function M.write_string_to_file(fname, str)
+function M.write_string_to_file(str, fname)
     vim.fn.mkdir(vim.fn.fnamemodify(fname, ":h"), "p") -- Ensure directory exists
     local f = io.open(fname, "w")
     if f then
