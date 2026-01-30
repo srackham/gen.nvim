@@ -332,7 +332,7 @@ local function write_to_buffer(lines)
     vim.api.nvim_set_option_value("modifiable", false,
                                   {buf = globals.result_buffer})
 
-    -- Save response window lines.
+    -- Save Responses window lines.
     for _, v in pairs(lines) do
         table.insert(all_lines, v)
     end
@@ -391,7 +391,7 @@ local function create_window(cmd, opts)
         close_window(opts)
     end, {buffer = globals.result_buffer})
     vim.keymap.set("n", M.retry_map, function()
-        local buf = 0 -- Current buffer i.e. response buffer
+        local buf = 0 -- Current buffer i.e. Responses buffer
         jobstop()
           vim.api.nvim_set_option_value("modifiable", true, {buf = buf})
           vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "", })
@@ -402,7 +402,7 @@ local function create_window(cmd, opts)
     vim.keymap.set("n", M.close_map, function()
         close_response_window()
         reset()
-    end, {buffer = globals.result_buffer, desc = "Close the response window and clear the model context"})
+    end, {buffer = globals.result_buffer, desc = "Close the Responses window and clear the model context"})
 end
 
 M.exec = function(options)

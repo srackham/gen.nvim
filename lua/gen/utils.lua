@@ -155,13 +155,13 @@ end
 -- @param win_id integer|nil The window ID to move cursor to, or nil if invalid
 function M.cursor_to_end(win_id)
     if win_id ~= nil and vim.api.nvim_win_is_valid(win_id) then
-        -- Move the cursor to the last character in the response buffer
+        -- Move the cursor to the last character in the Responses buffer
         local buf = vim.api.nvim_win_get_buf(win_id)
         local last_row = vim.api.nvim_buf_line_count(buf)
         local last_line = vim.api.nvim_buf_get_lines(buf, last_row - 1, last_row, false)[1] or ""
         local last_col = math.max(#last_line - 1, 0)
         vim.api.nvim_win_set_cursor(win_id, { last_row, last_col })
-        -- Focus response window
+        -- Focus Responses window
         vim.api.nvim_set_current_win(win_id)
     end
 end
