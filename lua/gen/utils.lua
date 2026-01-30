@@ -203,7 +203,30 @@ function M.open_float(path, opts)
       style = "minimal",
   }, opts or {})
 
-  local buf = vim.api.nvim_create_buf(false, true)
+  -- Check if buffer for path already exists
+  local existing_buf = nil
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf) and vim.api.nvim_buf_get_name(buf) == path then
+      existing_buf = buf
+      break
+    end
+  end
+
+  local buf = existing_buf or vim.api.nvim_create_buf(false, true)
+
+  -- Check if window for buffer already exists
+  local existing_win = nil
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_buf(win) == buf then
+      existing_win = win
+      break
+    end
+  end
+
+  if existing_win then
+    vim.api.nvim_set_current_win(existing_win)
+    return
+  end
 
   local ui = vim.api.nvim_list_uis()[1]
   local width = math.floor(ui.width * opts.width)
@@ -224,7 +247,9 @@ function M.open_float(path, opts)
   })
 
   vim.api.nvim_win_call(win, function()
-    vim.cmd.edit(path)
+    if not existing_buf then
+      vim.cmd.edit(path)
+    end
   end)
 end
 
